@@ -110,7 +110,7 @@ function Home() {
                         </div>
 
                     </div>
-                    <button className='w-full bg-orange-600 text-white p-2 rounded mb-2' onClick={() => setIsBookingPopOver(false)}>Book Appointment</button>
+                    <button className='w-full bg-orange-600 text-white p-2 rounded mb-2' onClick={() => setIsBookingPopOver(false)}>Book My Slot</button>
                     <button className='w-full bg-gray-300 text-white p-2 rounded mt-2' onClick={() => setIsBookingPopOver(false)}>Close</button>
                 </div>
             )}
