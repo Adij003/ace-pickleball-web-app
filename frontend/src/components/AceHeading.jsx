@@ -1,9 +1,10 @@
 import React from 'react';
+import logo from '../assets/acePickleBallLogoWBg.png'
 
 function AceHeading() {
   return (
-    <div className="text-3xl font-bold text-center py-4 bg-gradient-to-r from-blue-400 to-blue-600 text-white rounded-lg shadow-md">
-      Ace Pickleball Academy
+    <div className="py-4 rounded-lg shadow-md">
+       <img src={logo} alt="Ace Pickleball Academy Logo" className="h-16" />
     </div>
   );
 }

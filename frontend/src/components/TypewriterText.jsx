@@ -53,7 +53,7 @@ function TypewriterText() {
   }, [charIndex, isDeleting, index, pause, isComplete]);
 
   return (
-    <div className="mt-4 p-4 rounded-2xl backdrop-blur-md">
+    <div className="p-4 rounded-2xl backdrop-blur-md">
       <div className="text-3xl font-bold">{text}{!isComplete && "|"}</div>
     </div>
   );

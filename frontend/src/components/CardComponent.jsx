@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import court1 from "../assets/court1.JPG";
-import court2 from "../assets/court2.JPG";
-import court3 from "../assets/court3.JPG";
-import court4 from "../assets/court4.JPG";
+import court1 from "../assets/court1.webp";
+import court2 from "../assets/court2.webp";
+import court3 from "../assets/court3.webp";
+import court4 from "../assets/court4.webp";
 
 const images = [court1, court2, court3, court4];
 
-function CardComponent() {
+function CardComponent({onBookNowClick}) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
@@ -46,7 +46,9 @@ function CardComponent() {
 
       {/* Card Footer */}
       <div className="p-4 pt-0">
-        <button className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-blue-700">
+        <button className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-blue-700"
+        onClick={onBookNowClick}
+        >
           Book Now
         </button>
       </div>
