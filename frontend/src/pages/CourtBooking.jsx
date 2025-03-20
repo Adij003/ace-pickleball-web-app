@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import Header from '../components/Header';
 import { Link, useNavigate } from 'react-router-dom'
 import { IoArrowBack } from "react-icons/io5";
+import { toast } from 'react-toastify';
+
+const preBookedSlots = {
+    "2025-03-20-06:00 AM - 07:00 AM-C1": true,
+    "2025-03-20-07:00 AM - 08:00 AM-C2": true,
+    "2025-03-20-08:00 AM - 09:00 AM-C3": true,
+};
+
 
 const timeSlots = [
     { time: "06:00 AM - 07:00 AM", price: "₹800" },
@@ -40,6 +48,7 @@ function CourtBooking() {
         return dates;
     };
 
+
     const selectedMonthYear = new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const [selectedSlots, setSelectedSlots] = useState({});
@@ -68,7 +77,23 @@ function CourtBooking() {
         });
     };
 
-    console.log('Selected slots complete ', selectedSlots,)
+
+    const handleNext = (event) => {
+        if (Object.keys(selectedSlots).length === 0) {
+            event.preventDefault(); // Prevent navigation
+            toast.error("Please select at least one slot!", {
+                position: "top-center",
+                autoClose: 2000,
+                style: {
+                    width: "360px",
+                    margin: "20px auto",
+                    textAlign: "center",
+                },
+            });
+        }
+    };
+
+    console.log('Selected slots complete ', selectedSlots)
 
 
     return (
@@ -125,10 +150,16 @@ function CourtBooking() {
                                     <div key={court} className="flex justify-center ">
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 rounded border-gray-500 bg-gray-800 checked:bg-red-500"
+                                            className={`w-4 h-4 rounded border-gray-500 bg-gray-800 
+        ${preBookedSlots[`${selectedDate}-${time}-${court}`] ? 'checked:bg-red-500 cursor-not-allowed' : ''}`}
                                             onChange={(event) => handleCheckboxChange(event, time, court, price)}
-                                            checked={!!selectedSlots[`${selectedDate}-${time}-${court}`]}
+                                            checked={
+                                                !!selectedSlots[`${selectedDate}-${time}-${court}`] ||
+                                                preBookedSlots[`${selectedDate}-${time}-${court}`] // Ensure pre-booked slots are checked
+                                            }
+                                            disabled={!!preBookedSlots[`${selectedDate}-${time}-${court}`]} // Disable pre-booked slots
                                         />
+
                                     </div>
                                 ))}
                             </div>
@@ -139,8 +170,10 @@ function CourtBooking() {
             </div>
 
             <Link to="/checkout"
-                state={{ selectedSlots, selectedDate}}
-                className='w-full flex items-center justify-center'>
+                state={{ selectedSlots, selectedDate }}
+                className='w-full flex items-center justify-center'
+                onClick={handleNext}
+            >
                 <button className=' w-[90%] bg-orange-600 text-white p-2 rounded mb-4'>Next</button>
             </Link>
         </div>

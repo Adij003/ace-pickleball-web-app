@@ -8,6 +8,7 @@ function CheckoutPage() {
 
     // Convert selectedSlots object into an array for rendering
     const slotArray = Object.values(selectedSlots);
+    const navigate = useNavigate()
 
     // Calculate total price
     const totalAmount = slotArray.reduce((sum, slot) => sum + parseInt(slot.price.replace("₹", ""), 10), 0);
@@ -23,13 +24,13 @@ function CheckoutPage() {
                             >
                                     <IoArrowBack />
                                 </button>
-                                <span className='mr-10 font-bold'>Select Slot</span>
+                                <span className='mr-10 font-bold'>Booking summary</span>
                                 <span></span>
                             </div>
            </div>
            <div>
             
-           <div className="min-h-screen bg-white text-black flex flex-col items-center p-4">
+           <div className=" bg-white text-black flex flex-col items-center p-4">
             {/* Booking Summary */}
             <div className="w-full max-w-md bg-white p-4 rounded-lg shadow-md">
                 <h2 className="text-lg text-orange-400 font-bold mb-2">Booking Summary</h2>
