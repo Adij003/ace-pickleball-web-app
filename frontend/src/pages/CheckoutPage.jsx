@@ -1,0 +1,85 @@
+import React from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { IoArrowBack, IoPerson, IoCall, IoMail } from "react-icons/io5";
+
+function CheckoutPage() {
+    const location = useLocation();
+    const { selectedSlots = {}, selectedDate } = location.state || { selectedSlots: {}, selectedDate: "" };
+
+    // Convert selectedSlots object into an array for rendering
+    const slotArray = Object.values(selectedSlots);
+
+    // Calculate total price
+    const totalAmount = slotArray.reduce((sum, slot) => sum + parseInt(slot.price.replace("₹", ""), 10), 0);
+
+    return (
+        <div>
+           <div className="w-full h-full bg-white py-2 rounded-t-2xl">
+            <div
+                                className="flex w-full justify-between items-center gap-2 p-2 rounded-lg"
+                            >   <button
+                                onClick={() => navigate("/booking-details")}
+                                className='font-bold text-xl ml-4'
+                            >
+                                    <IoArrowBack />
+                                </button>
+                                <span className='mr-10 font-bold'>Select Slot</span>
+                                <span></span>
+                            </div>
+           </div>
+           <div>
+            
+           <div className="min-h-screen bg-white text-black flex flex-col items-center p-4">
+            {/* Booking Summary */}
+            <div className="w-full max-w-md bg-white p-4 rounded-lg shadow-md">
+                <h2 className="text-lg text-orange-400 font-bold mb-2">Booking Summary</h2>
+                <div className="border border-gray-700 rounded-lg p-3">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-3 text-gray-300 font-bold border-b border-gray-700 pb-2">
+                        <span>Court</span>
+                        <span>Time Slot</span>
+                        <span>Amount</span>
+                    </div>
+
+                    {/* Slot Details */}
+                    {slotArray.map((slot, index) => (
+                        <div key={index} className="grid grid-cols-3 text-sm border-b border-gray-800 py-2">
+                            <span>{slot.court}</span>
+                            <span>{slot.time}</span>
+                            <span>{slot.price}</span>
+                        </div>
+                    ))}
+
+                    {/* Date & Total Price */}
+                    <div className="flex justify-between mt-3 text-sm font-bold">
+                        <span className="text-amber-400">Date: {new Date(selectedDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                        <span className="text-amber-600">Total: ₹{totalAmount}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* User Details */}
+            <div className="w-full max-w-md bg-white p-4 border-2 border-amber-300 rounded-lg shadow-md mt-4">
+                <h2 className="text-lg text-black font-bold mb-2">User Info</h2>
+                <div className="space-y-2">
+                    <div className="flex items-center bg-gray-200 p-3 rounded-md">
+                        <IoPerson className="text-gray-400 mr-3" />
+                        <span className='text-black'>Adi Jain</span>
+                    </div>
+                    <div className="flex items-center bg-gray-200 p-3 rounded-md">
+                        <IoCall className="text-gray-400 mr-3" />
+                        <span className='text-black'>9799042426</span>
+                    </div>
+                    <div className="flex items-center bg-gray-200 p-3 rounded-md">
+                        <IoMail className="text-gray-400 mr-3" />
+                        <span className='text-black'>jainadi1717@gmail.com</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+           </div>
+        </div>
+    );
+}
+
+export default CheckoutPage;
