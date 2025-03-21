@@ -5,9 +5,19 @@ import { IoArrowBack } from "react-icons/io5";
 import { toast } from 'react-toastify';
 
 const preBookedSlots = {
-    "2025-03-20-06:00 AM - 07:00 AM-C1": true,
+    "2025-03-20-07:00 AM - 08:00 AM-C1": true,
     "2025-03-20-07:00 AM - 08:00 AM-C2": true,
     "2025-03-20-08:00 AM - 09:00 AM-C3": true,
+    "2025-03-20-08:00 AM - 09:00 AM-C4": true,
+    "2025-03-20-08:00 AM - 09:00 AM-C1": true,
+    "2025-03-20-08:00 AM - 09:00 AM-C2": true,
+
+    "2025-03-22-07:00 AM - 08:00 AM-C1": true,
+    "2025-03-22-07:00 AM - 08:00 AM-C2": true,
+    "2025-03-22-08:00 AM - 09:00 AM-C3": true,
+    "2025-03-22-08:00 AM - 09:00 AM-C4": true,
+    "2025-03-22-08:00 AM - 09:00 AM-C1": true,
+    "2025-03-22-08:00 AM - 09:00 AM-C2": true,
 };
 
 
@@ -117,7 +127,7 @@ function CourtBooking() {
                             <div className="text-xl font-semibold text-orange-400">{selectedMonthYear}</div>
                             {/* <hr className="w-20 border-gray-200 border-t-[2px] mt-1" /> */}
                         </label>
-                        <div className='flex space-x-3 justify-center'>
+                        <div className='flex space-x-2 justify-center'>
                             {generateDates().map(({ fullDate, day, date }) => (
                                 <div key={fullDate} className='text-center cursor-pointer' onClick={() => handleSelectDate(fullDate)}>
                                     <div className='text-sm font-semibold mb-2'>{day}</div>

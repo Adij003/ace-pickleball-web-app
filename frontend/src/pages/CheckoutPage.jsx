@@ -12,7 +12,9 @@ function CheckoutPage() {
 
     // Calculate total price
     const totalAmount = slotArray.reduce((sum, slot) => sum + parseInt(slot.price.replace("₹", ""), 10), 0);
-
+    const handleCheckout = () => {
+        console.log('Checkout: ')
+    }
     return (
         <div>
            <div className="w-full h-full bg-white py-2 rounded-t-2xl">
@@ -24,7 +26,7 @@ function CheckoutPage() {
                             >
                                     <IoArrowBack />
                                 </button>
-                                <span className='mr-10 font-bold'>Booking summary</span>
+                                <span className='mr-10 font-bold'>Proceed to Checkout</span>
                                 <span></span>
                             </div>
            </div>
@@ -32,21 +34,21 @@ function CheckoutPage() {
             
            <div className=" bg-white text-black flex flex-col items-center p-4">
             {/* Booking Summary */}
-            <div className="w-full max-w-md bg-white p-4 rounded-lg shadow-md">
+            <div className="w-full max-w-md bg-white p-4 border-2 border-amber-300 rounded-lg shadow-2xl">
                 <h2 className="text-lg text-orange-400 font-bold mb-2">Booking Summary</h2>
                 <div className="border border-gray-700 rounded-lg p-3">
                     {/* Table Header */}
-                    <div className="grid grid-cols-3 text-gray-300 font-bold border-b border-gray-700 pb-2">
+                    <div className="grid grid-cols-4 text-center text-gray-300 font-bold border-b border-gray-500 pb-2">
                         <span>Court</span>
-                        <span>Time Slot</span>
+                        <span className='col-span-2'>Time Slot</span>
                         <span>Amount</span>
                     </div>
 
                     {/* Slot Details */}
                     {slotArray.map((slot, index) => (
-                        <div key={index} className="grid grid-cols-3 text-sm border-b border-gray-800 py-2">
+                        <div key={index} className="grid grid-cols-4 text-center text-sm py-2 ">
                             <span>{slot.court}</span>
-                            <span>{slot.time}</span>
+                            <span className='col-span-2'>{slot.time}</span>
                             <span>{slot.price}</span>
                         </div>
                     ))}
@@ -60,7 +62,7 @@ function CheckoutPage() {
             </div>
 
             {/* User Details */}
-            <div className="w-full max-w-md bg-white p-4 border-2 border-amber-300 rounded-lg shadow-md mt-4">
+            <div className="w-full max-w-md bg-white p-4 border-2 border-amber-300 rounded-lg shadow-2xl mt-4">
                 <h2 className="text-lg text-black font-bold mb-2">User Info</h2>
                 <div className="space-y-2">
                     <div className="flex items-center bg-gray-200 p-3 rounded-md">
@@ -79,6 +81,13 @@ function CheckoutPage() {
             </div>
         </div>
            </div>
+             <Link to="/"
+                           state={{ selectedSlots, selectedDate }}
+                           className='w-full flex items-center justify-center '
+                           onClick={handleCheckout}
+                       >
+                           <button className='absolute bottom-0 w-[90%] bg-orange-600 text-white p-2 rounded mb-4'>Checkout</button>
+                       </Link>
         </div>
     );
 }
