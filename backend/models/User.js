@@ -1,9 +1,14 @@
 const userSchema = {
-  firstName: "string",
-  lastName: "string",
+  name: "string",
   email: "string",
-  password: "string",
-  role: "string", 
+  bookings: [
+    {
+      bookingId: "string",
+      courtId: "string",
+      courtTimeSlotId: ["number"],
+      payments: "object"
+    }
+  ],
   createdAt: "timestamp",
   updatedAt: "timestamp"
 };

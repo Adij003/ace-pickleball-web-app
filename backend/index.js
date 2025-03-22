@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js"; // Added user routes
 
@@ -8,8 +9,16 @@ dotenv.config();
 const app = express();
 
 // Middleware
+app.use(cors({ origin: "http://localhost:5173", credentials: true })); // CORS enabled for frontend origin
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Security Headers
+app.use((req, res, next) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    next();
+});
 
 // Health Check Endpoint
 app.get("/", (req, res) => res.status(200).json({ message: "API is running..." }));
@@ -18,9 +27,14 @@ app.get("/", (req, res) => res.status(200).json({ message: "API is running..." }
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes); // Added user routes
 
+// 404 Handler for unmatched routes
+app.use((req, res) => {
+    res.status(404).json({ error: "Route not found" });
+});
+
 // Error Handling Middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error("Error:", err.message);
     res.status(500).json({ error: "Internal Server Error" });
 });
 

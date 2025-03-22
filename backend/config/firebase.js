@@ -3,10 +3,8 @@ dotenv.config();
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import admin from "firebase-admin";
-
-
+import serviceAccount from "./firebaseServiceAccountKey.json" assert { type: 'json' };
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -20,16 +18,18 @@ const firebaseConfig = {
   measurementId: process.env.FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
+// Initialize Firebase (for client-side operations)
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-// Correct Admin Initialization for Firebase v11+
+// Correct Admin Initialization for Firebase Admin SDK
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
 }
+
+// Use Firebase Admin Firestore for `.collection()` functionality
+const db = admin.firestore();
 
 export { auth, db, admin };

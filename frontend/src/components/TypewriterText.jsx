@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const texts = ["Hello Adi", "Pickleball today?"];
-const FINAL_TEXT = "Hello Adi!"; // Final stop text
+const texts = ["Hello", "Pickleball today?"];
 
 function TypewriterText() {
   const [text, setText] = useState("");
@@ -11,6 +10,16 @@ function TypewriterText() {
   const [speed, setSpeed] = useState(100);
   const [pause, setPause] = useState(false);
   const [isComplete, setIsComplete] = useState(false); // Stop animation flag
+  const [finalText, setFinalText] = useState("Hello");
+
+  useEffect(() => {
+    const userInfo = JSON.parse(localStorage.getItem("user-info"));
+    if (userInfo && userInfo.name) {
+      const firstName = userInfo.name.split(' ')[0];
+      setFinalText(`Hello ${firstName} 👋`);
+
+    }
+  }, []);
 
   useEffect(() => {
     if (pause || isComplete) return;
@@ -21,15 +30,9 @@ function TypewriterText() {
           setText((prev) => prev + texts[index][charIndex]);
           setCharIndex(charIndex + 1);
         } else {
-          if (index === texts.length - 1) {
-            setPause(true);
-            setTimeout(() => setPause(false), 2000);
-            setIsDeleting(true);
-          } else {
-            setPause(true);
-            setTimeout(() => setPause(false), 2000);
-            setIsDeleting(true);
-          }
+          setPause(true);
+          setTimeout(() => setPause(false), 2000);
+          setIsDeleting(true);
         }
       } else {
         if (charIndex > 0) {
@@ -38,7 +41,7 @@ function TypewriterText() {
         } else {
           if (index === texts.length - 1) {
             setIsComplete(true); // Stop typing after one cycle
-            setText(FINAL_TEXT); // Set final text with an exclamation mark
+            setText(finalText); // Display personalized greeting
           } else {
             setPause(true);
             setTimeout(() => setPause(false), 500);
