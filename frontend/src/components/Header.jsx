@@ -16,7 +16,7 @@ function Header({ handleNavDrawer }) {
         <div className="flex justify-between items-center m-2">
             <div className="relative h-15 w-15 p-[2px] rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500">
                 <img
-                    src={userProfile}
+                    src={userProfile ? userProfile : 'img  '}
                     alt="user profile"
                     className="h-full w-full rounded-full border-2 border-white"
                 />

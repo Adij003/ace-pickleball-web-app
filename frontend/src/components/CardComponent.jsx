@@ -41,7 +41,7 @@ function CardComponent({onBookNowClick}) {
       <div className="p-4">
         <h3 className="text-xl font-semibold text-gray-800 mb-2">Pickleball Courts</h3>
         <p className="text-gray-600 text-sm">
-          The place is close to Barceloneta Beach and bus stop just 2 min by walk and near to "Naviglio" where you can enjoy the main nightlife in Barcelona.
+        Welcome to Ace Pickleball Club, Bhopal's premier pickleball destination! We're passionate about creating a vibrant community of pickleball enthusiasts, where players of all levels can come together to play, learn, and socialize.
         </p>
       </div>
 
