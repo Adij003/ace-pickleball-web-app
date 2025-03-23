@@ -18,10 +18,11 @@ function Home() {
 
     const handleLogout = () => {
         // Remove authentication token or user session
-        localStorage.removeItem("authToken");  // Adjust this based on your authentication setup
+       localStorage.removeItem("authToken");  
         sessionStorage.removeItem("user");
+        setIsOpen(false);
+        navigate("/");
 
-        // Redirect to login page
         navigate("/");
     };
 
@@ -74,6 +75,9 @@ function Home() {
                                         <div className="relative mt-6 flex-1 px-4 sm:px-6 space-y-4">
                                             <Link to="/about-us" className="block w-full text-center bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition">
                                                 About Us
+                                            </Link>
+                                            <Link to="/history" className="block w-full text-center bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition">
+                                                Booking History
                                             </Link>
                                             <Link to="/membership" className="block w-full text-center bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition">
                                                 Membership Details
