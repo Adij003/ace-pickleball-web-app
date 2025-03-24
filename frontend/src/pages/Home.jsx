@@ -25,14 +25,14 @@ function Home() {
         localStorage.removeItem("user-info");
         localStorage.removeItem("token");
         
-        // Update state
+        // Force state update before navigation
         setIsLoggedIn(false);
-        
-        // Close the drawer
         setIsOpen(false);
         
-        // Redirect to home page
-        navigate("/");
+        // Use setTimeout to ensure state updates before navigation
+        setTimeout(() => {
+            navigate("/");
+        }, 0);
     };
 
     const handleLogin = () => {

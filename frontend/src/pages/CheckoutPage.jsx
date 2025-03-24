@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { IoArrowBack, IoPerson, IoCall, IoMail, IoCalendar } from "react-icons/io5";
+import { IoArrowBack, IoPerson, IoCall, IoMail, IoCalendar, IoLogIn } from "react-icons/io5";
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
@@ -12,8 +12,11 @@ function CheckoutPage() {
     const [phoneNumber, setPhoneNumber] = useState("");
     const [phoneError, setPhoneError] = useState("");
 
-    // Get user info from localStorage
-    const user = JSON.parse(localStorage.getItem("user-info")) || {};
+    // Check if user is logged in
+    const isLoggedIn = localStorage.getItem("isAuthenticated") === "true";
+    
+    // Get user info from localStorage if logged in
+    const user = isLoggedIn ? JSON.parse(localStorage.getItem("user-info")) || {} : {};
     const { name = "Guest", email = "" } = user;
     const firstName = name.split(' ')[0];
 
@@ -38,6 +41,18 @@ function CheckoutPage() {
     };
 
     const handleCheckout = async () => {
+        if (!isLoggedIn) {
+            // Redirect to login with current state to return here after login
+            navigate("/login", {
+                state: {
+                    fromCheckout: true,
+                    selectedSlots,
+                    selectedDate
+                }
+            });
+            return;
+        }
+
         if (!phoneNumber) {
             toast.error("Please enter your phone number");
             return;
@@ -177,54 +192,65 @@ function CheckoutPage() {
                     </div>
                 </div>
 
-                {/* User Details Card */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                        <IoPerson className="mr-2" /> Your Details
-                    </h2>
-                    
-                    <div className="space-y-3">
-                        <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                            <IoPerson className="text-gray-400 mr-3" size={18} />
-                            <span className="text-gray-700">{name}</span>
-                        </div>
+                {/* User Details Card - Only show if logged in */}
+                {isLoggedIn ? (
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <IoPerson className="mr-2" /> Your Details
+                        </h2>
                         
-                        <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                            <IoMail className="text-gray-400 mr-3" size={18} />
-                            <span className="text-gray-700">{email}</span>
-                        </div>
-                        
-                        <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                            <IoCall className="text-gray-400 mr-3" size={18} />
-                            <div className="flex-1">
-                                <input
-                                    type="tel"
-                                    value={phoneNumber}
-                                    onChange={handlePhoneChange}
-                                    className="bg-transparent w-full focus:outline-none"
-                                    placeholder="Enter 10-digit phone number"
-                                    maxLength={10}
-                                    pattern="[0-9]{10}"
-                                    required
-                                />
-                                {phoneError && (
-                                    <p className="text-red-500 text-xs mt-1">{phoneError}</p>
-                                )}
+                        <div className="space-y-3">
+                            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <IoPerson className="text-gray-400 mr-3" size={18} />
+                                <span className="text-gray-700">{name}</span>
+                            </div>
+                            
+                            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <IoMail className="text-gray-400 mr-3" size={18} />
+                                <span className="text-gray-700">{email}</span>
+                            </div>
+                            
+                            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <IoCall className="text-gray-400 mr-3" size={18} />
+                                <div className="flex-1">
+                                    <input
+                                        type="tel"
+                                        value={phoneNumber}
+                                        onChange={handlePhoneChange}
+                                        className="bg-transparent w-full focus:outline-none"
+                                        placeholder="Enter 10-digit phone number"
+                                        maxLength={10}
+                                        pattern="[0-9]{10}"
+                                        required
+                                    />
+                                    {phoneError && (
+                                        <p className="text-red-500 text-xs mt-1">{phoneError}</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4">
+                            Please login to complete your booking
+                        </h2>
+                        <p className="text-gray-600 mb-4">
+                            Your selected slots will be saved during login
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Fixed Bottom Button */}
             <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4">
                 <button
                     onClick={handleCheckout}
-                    disabled={isProcessing || slotArray.length === 0 || phoneNumber.length !== 10}
+                    disabled={isProcessing || slotArray.length === 0 || (isLoggedIn && phoneNumber.length !== 10)}
                     className={`w-full py-3 rounded-lg font-bold text-white ${
                         isProcessing ? 'bg-orange-400' : 'bg-orange-500 hover:bg-orange-600'
                     } transition-colors ${
-                        (slotArray.length === 0 || phoneNumber.length !== 10) ? 'opacity-50 cursor-not-allowed' : ''
+                        (slotArray.length === 0 || (isLoggedIn && phoneNumber.length !== 10)) ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                     {isProcessing ? (
@@ -235,8 +261,13 @@ function CheckoutPage() {
                             </svg>
                             Processing...
                         </span>
-                    ) : (
+                    ) : isLoggedIn ? (
                         `Pay ₹${totalAmount} & Confirm Booking`
+                    ) : (
+                        <span className="flex items-center justify-center">
+                            <IoLogIn className="mr-2" />
+                            Login to Continue Booking
+                        </span>
                     )}
                 </button>
             </div>

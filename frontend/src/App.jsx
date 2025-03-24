@@ -75,19 +75,13 @@ function App() {
                 path="/dashboard" 
                 element={isAuthenticated ? <Home /> : <Navigate to="/login" />} 
               />
-              <Route 
-                path="/booking-details" 
-                element={isAuthenticated ? <CourtBooking /> : <Navigate to="/login" />} 
-              />
-              <Route 
-                path="/checkout" 
-                element={isAuthenticated ? <CheckoutPage /> : <Navigate to="/login" />} 
-              />
+              <Route path="/booking-details" element={<CourtBooking />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
               <Route 
                 path="/booking-confirmation" 
                 element={isAuthenticated ? <PaymentSuccess /> : <Navigate to="/login" />} 
               />
-               <Route 
+              <Route 
                 path="/booking-failed" 
                 element={isAuthenticated ? <PaymentFail /> : <Navigate to="/login" />} 
               />
@@ -97,9 +91,6 @@ function App() {
               <Route path="/events" element={<UpcomingDetials />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/about-us" element={<AboutUsNavbar />} />
-
-
-
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
