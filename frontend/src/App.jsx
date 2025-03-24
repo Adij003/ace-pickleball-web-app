@@ -9,6 +9,13 @@ import Login from "./pages/Login";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import RefreshHandler from "./pages/RefreshHandler";
 import NotFound from "./pages/NotFound";
+import AboutUsNavbar from "./pages/AboutUsNavbar";
+import BookingHistory from "./pages/BookingHistory";
+import MembershipDetails from "./pages/MembershipDetails";
+import UpcomingDetials from "./pages/UpcomingDetials";
+import Gallery from "./pages/Gallery";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFail from "./pages/PaymentFail";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -76,7 +83,23 @@ function App() {
                 path="/checkout" 
                 element={isAuthenticated ? <CheckoutPage /> : <Navigate to="/login" />} 
               />
+              <Route 
+                path="/booking-confirmation" 
+                element={isAuthenticated ? <PaymentSuccess /> : <Navigate to="/login" />} 
+              />
+               <Route 
+                path="/booking-failed" 
+                element={isAuthenticated ? <PaymentFail /> : <Navigate to="/login" />} 
+              />
               <Route path="/auth/callback" element={<GoogleAuth />} />
+              <Route path="/history" element={<BookingHistory />} />
+              <Route path="/membership" element={<MembershipDetails />} />
+              <Route path="/events" element={<UpcomingDetials />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/about-us" element={<AboutUsNavbar />} />
+
+
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

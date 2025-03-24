@@ -88,6 +88,7 @@ function CheckoutPage() {
                 config: error.config
             });
             toast.error(error.response?.data?.message || "Booking failed. Please try again.");
+             navigate("/booking-failed")
         } finally {
             setIsProcessing(false);
         }

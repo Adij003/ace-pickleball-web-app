@@ -17,12 +17,8 @@ function Home() {
     };
 
     const handleLogout = () => {
-        // Remove authentication token or user session
-       localStorage.removeItem("authToken");  
-        sessionStorage.removeItem("user");
-        setIsOpen(false);
-        navigate("/");
-
+    localStorage.setItem("isAuthenticated", "false"); // Clear login state
+    setIsOpen(false);
         navigate("/");
     };
 
