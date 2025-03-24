@@ -10,19 +10,62 @@ function CourtBooking() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [preBookedSlots, setPreBookedSlots] = useState({});
     const [selectedSlots, setSelectedSlots] = useState({});
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const fetchSlots = async () => {
+            setLoading(true);
             try {
-                const response = await axios.get('http://localhost:5001/api/courts/court-details');
-                setPreBookedSlots(response.data);
+                const courtIds = ["C1", "C2", "C3", "C4"];
+                const slotPromises = courtIds.map(courtId =>
+                    axios.get(`http://localhost:5001/api/courts/court-details`, {
+                        params: {
+                            date: selectedDate,
+                            courtId
+                        }
+                    })
+                );
+        
+                const responses = await Promise.all(slotPromises);
+                console.log("Raw responses from backend:", responses); // Log raw responses
+        
+                const allSlots = {};
+        
+                responses.forEach((response, index) => {
+                    if (response.status === 200) {
+                        const courtId = courtIds[index];
+                        const slotsData = response.data;
+                        
+                        console.log(`Data for court ${courtId}:`, slotsData); // Log data for each court
+                        
+                        Object.entries(slotsData).forEach(([timeSlot, slotInfo]) => {
+                            const key = `${selectedDate}-${timeSlot}-${courtId}`;
+                            console.log(`Slot details for ${key}:`, slotInfo); // Log individual slot details
+                            
+                            // Store the entire slot info for reference
+                            allSlots[key] = {
+                                booked: slotInfo.booked,
+                                bookedBy: slotInfo.bookedBy,
+                                price: slotInfo.price,
+                                timeSlot: slotInfo.timeSlot,
+                                court: courtId,
+                                date: selectedDate
+                            };
+                        });
+                    }
+                });
+        
+                console.log("Processed all slots:", allSlots); // Log final processed data
+                setPreBookedSlots(allSlots);
             } catch (error) {
-                console.error("Error fetching slots:", error);
-                toast.error("Failed to fetch slots.");
+                console.error("Error fetching slots:", error.response?.data || error.message);
+                toast.error("Failed to fetch slots. Please try again.");
+            } finally {
+                setLoading(false);
             }
         };
         fetchSlots();
-    }, []);
+    }, [selectedDate]);
 
     const generateDates = () => {
         const dates = [];
@@ -48,32 +91,37 @@ function CourtBooking() {
     };
 
     const timeSlots = [
-        { time: "06:00 AM - 07:00 AM", price: "₹800" },
-        { time: "07:00 AM - 08:00 AM", price: "₹800" },
-        { time: "08:00 AM - 09:00 AM", price: "₹800" },
-        { time: "09:00 AM - 10:00 AM", price: "₹800" },
-        { time: "10:00 AM - 11:00 AM", price: "₹800" },
-        { time: "03:00 PM - 04:00 PM", price: "₹800" },
-        { time: "04:00 PM - 05:00 PM", price: "₹800" },
-        { time: "05:00 PM - 06:00 PM", price: "₹800" },
-        { time: "06:00 PM - 07:00 PM", price: "₹800" },
-        { time: "07:00 PM - 08:00 PM", price: "₹800" },
-        { time: "08:00 PM - 09:00 PM", price: "₹800" },
-        { time: "09:00 PM - 10:00 PM", price: "₹800" },
-        { time: "10:00 PM - 11:00 PM", price: "₹800" },
-        { time: "11:00 PM - 12:00 AM", price: "₹800" },
+        "06:00 AM - 07:00 AM",
+        "07:00 AM - 08:00 AM",
+        "08:00 AM - 09:00 AM",
+        "09:00 AM - 10:00 AM",
+        "10:00 AM - 11:00 AM",
+        "03:00 PM - 04:00 PM",
+        "04:00 PM - 05:00 PM",
+        "05:00 PM - 06:00 PM",
+        "06:00 PM - 07:00 PM",
+        "07:00 PM - 08:00 PM",
+        "08:00 PM - 09:00 PM",
+        "09:00 PM - 10:00 PM"
     ];
 
     const courts = ["C1", "C2", "C3", "C4"];
 
-    const handleCheckboxChange = (event, time, court, price) => {
+    const handleCheckboxChange = (event, time, court) => {
         const isChecked = event.target.checked;
         setSelectedSlots((prev) => {
             const newSlots = { ...prev };
             const key = `${selectedDate}-${time}-${court}`;
+            const slotInfo = preBookedSlots[key] || {
+                timeSlot: time,
+                court,
+                date: selectedDate,
+                price: "₹800", // Default price if not found
+                booked: false
+            };
 
             if (isChecked) {
-                newSlots[key] = { time, court, price, date: selectedDate };
+                newSlots[key] = slotInfo;
             } else {
                 delete newSlots[key];
             }
@@ -96,8 +144,11 @@ function CourtBooking() {
             });
         } else {
             try {
-                await axios.post('http://localhost:5001/api/courts/book-slots', selectedSlots);
-                toast.success("Slots booked successfully!");
+                // You might want to send the selected slots to your backend here
+                // await axios.post('http://localhost:5001/api/courts/book-slots', selectedSlots);
+                // toast.success("Slots booked successfully!");
+                // Then navigate to checkout
+                navigate("/checkout", { state: { selectedSlots, selectedDate } });
             } catch (error) {
                 console.error("Error booking slots:", error);
                 toast.error("Failed to book slots.");
@@ -131,46 +182,63 @@ function CourtBooking() {
                             ))}
                         </div>
                     </div>
-                    <div className="p-4 bg-white text-black text-sm TimeSlotCheckbox">
-                        <div className="grid grid-cols-6 items-center text-left font-bold">
-                            <div className='col-span-2'>Time Slot</div>
-                            {courts.map((court) => (
-                                <div key={court} className="text-center">{court}</div>
-                            ))}
+                    
+                    {loading ? (
+                        <div className="flex justify-center items-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
                         </div>
-                        {timeSlots.map(({ time, price }) => (
-                            <div key={time} className="grid grid-cols-6 items-center mt-2">
-                                <div className="text-left col-span-2 w-2xs text-xs mt-2">
-                                    <div>{time}</div>
-                                    <div className="text-green-400 font-bold">{price}</div>
-                                </div>
+                    ) : (
+                        <div className="p-4 bg-white text-black text-sm TimeSlotCheckbox">
+                            <div className="grid grid-cols-6 items-center text-left font-bold">
+                                <div className='col-span-2'>Time Slot</div>
                                 {courts.map((court) => (
-                                    <div key={court} className="flex justify-center">
-                                        <input
-                                            type="checkbox"
-                                            className={`w-4 h-4 rounded border-gray-500 bg-gray-800 
-                                            ${preBookedSlots[`${selectedDate}-${time}-${court}`] ? 'checked:bg-red-500 cursor-not-allowed' : ''}`}
-                                            onChange={(event) => handleCheckboxChange(event, time, court, price)}
-                                            checked={
-                                                !!selectedSlots[`${selectedDate}-${time}-${court}`] ||
-                                                preBookedSlots[`${selectedDate}-${time}-${court}`]
-                                            }
-                                            disabled={!!preBookedSlots[`${selectedDate}-${time}-${court}`]}
-                                        />
-                                    </div>
+                                    <div key={court} className="text-center">{court}</div>
                                 ))}
                             </div>
-                        ))}
-                    </div>
+                            {timeSlots.map((time) => {
+                                // Find the price for this time slot (from any court)
+                                const sampleSlotKey = `${selectedDate}-${time}-C1`;
+                                const price = preBookedSlots[sampleSlotKey]?.price || "₹800";
+                                
+                                return (
+                                    <div key={time} className="grid grid-cols-6 items-center mt-2">
+                                        <div className="text-left col-span-2 w-2xs text-xs mt-2">
+                                            <div>{time}</div>
+                                            <div className="text-green-400 font-bold">{price}</div>
+                                        </div>
+                                        {courts.map((court) => {
+                                            const slotKey = `${selectedDate}-${time}-${court}`;
+                                            const isBooked = preBookedSlots[slotKey]?.booked;
+                                            const isSelected = !!selectedSlots[slotKey];
+                                            
+                                            return (
+                                                <div key={court} className="flex justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className={`w-4 h-4 rounded border-gray-500 bg-gray-800 
+                                                        ${isBooked ? 'checked:bg-red-500 cursor-not-allowed' : ''}`}
+                                                        onChange={(event) => handleCheckboxChange(event, time, court)}
+                                                        checked={isBooked || isSelected}
+                                                        disabled={isBooked}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
-            <Link to="/checkout"
-                state={{ selectedSlots, selectedDate }}
-                className='w-full flex items-center justify-center'
-                onClick={handleNext}
-            >
-                <button className='w-[90%] bg-orange-600 text-white p-2 rounded mb-4'>Next</button>
-            </Link>
+            <div className='w-full flex items-center justify-center'>
+                <button 
+                    onClick={handleNext}
+                    className='w-[90%] bg-orange-600 text-white p-2 rounded mb-4'
+                >
+                    Next
+                </button>
+            </div>
         </div>
     );
 }
