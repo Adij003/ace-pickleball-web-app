@@ -19,7 +19,7 @@ function PaymentSuccess() {
             const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
             return () => clearTimeout(timer);
         } else {
-            navigate("/history"); // Redirect when countdown reaches 0
+            navigate("/"); // Changed from "/history" to "/"
         }
     }, [countdown, navigate]);
 
@@ -57,7 +57,7 @@ function PaymentSuccess() {
                     <ul className="mt-2 text-gray-700">
                         {slots.length > 0 ? (
                             slots.map((slot, index) => (
-                                <li key={index} className=" py-2">
+                                <li key={index} className="py-2">
                                     <span className="font-semibold">{slot.court}</span> - {slot.timeSlot} - {slot.price}
                                 </li>
                             ))
@@ -69,11 +69,11 @@ function PaymentSuccess() {
 
                 {/* Display Total Amount */}
                 <div className="mt-4 border-t pt-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Total Amount: {totalAmount} </h3>
+                    <h3 className="text-lg font-semibold text-gray-800">Total Amount: {totalAmount}</h3>
                 </div>
 
                 <p className="text-gray-400 text-sm mt-4">
-                Redirecting to bookings in <span className="font-bold">{countdown}</span> seconds...
+                    Redirecting to home in <span className="font-bold">{countdown}</span> seconds...
                 </p>
             </div>
         </div>

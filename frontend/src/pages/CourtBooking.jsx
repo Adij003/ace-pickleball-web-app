@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IoArrowBack } from "react-icons/io5";
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -11,13 +10,31 @@ function CourtBooking() {
     const [preBookedSlots, setPreBookedSlots] = useState({});
     const [selectedSlots, setSelectedSlots] = useState({});
     const [loading, setLoading] = useState(false);
+    const [slotStatus, setSlotStatus] = useState({});
 
+    const timeSlots = useMemo(() => [
+        "06:00 AM - 07:00 AM",
+        "07:00 AM - 08:00 AM",
+        "08:00 AM - 09:00 AM",
+        "09:00 AM - 10:00 AM",
+        "10:00 AM - 11:00 AM",
+        "03:00 PM - 04:00 PM",
+        "04:00 PM - 05:00 PM",
+        "05:00 PM - 06:00 PM",
+        "06:00 PM - 07:00 PM",
+        "07:00 PM - 08:00 PM",
+        "08:00 PM - 09:00 PM",
+        "09:00 PM - 10:00 PM"
+    ], []);
+
+    const courts = useMemo(() => ["C1", "C2", "C3", "C4"], []);
+
+    // Fetch initial court details
     useEffect(() => {
         const fetchSlots = async () => {
             setLoading(true);
             try {
-                const courtIds = ["C1", "C2", "C3", "C4"];
-                const slotPromises = courtIds.map(courtId =>
+                const slotPromises = courts.map(courtId =>
                     axios.get(`http://localhost:5001/api/courts/court-details`, {
                         params: {
                             date: selectedDate,
@@ -27,21 +44,15 @@ function CourtBooking() {
                 );
         
                 const responses = await Promise.all(slotPromises);
-                console.log("Raw responses from backend:", responses);
-        
                 const allSlots = {};
         
                 responses.forEach((response, index) => {
                     if (response.status === 200) {
-                        const courtId = courtIds[index];
+                        const courtId = courts[index];
                         const slotsData = response.data;
-                        
-                        console.log(`Data for court ${courtId}:`, slotsData);
                         
                         Object.entries(slotsData).forEach(([timeSlot, slotInfo]) => {
                             const key = `${selectedDate}-${timeSlot}-${courtId}`;
-                            console.log(`Slot details for ${key}:`, slotInfo);
-                            
                             allSlots[key] = {
                                 booked: slotInfo.booked,
                                 bookedBy: slotInfo.bookedBy,
@@ -54,7 +65,6 @@ function CourtBooking() {
                     }
                 });
         
-                console.log("Processed all slots:", allSlots);
                 setPreBookedSlots(allSlots);
             } catch (error) {
                 console.error("Error fetching slots:", error.response?.data || error.message);
@@ -64,7 +74,60 @@ function CourtBooking() {
             }
         };
         fetchSlots();
-    }, [selectedDate]);
+    }, [selectedDate, courts]);
+
+    // Fetch all slot statuses
+    useEffect(() => {
+        const fetchAllSlotStatuses = async () => {
+            try {
+                const statusPromises = timeSlots.flatMap(time => 
+                    courts.map(async court => {
+                        try {
+                            const response = await axios.get(
+                                'http://localhost:5001/api/courts/slot-status',
+                                { 
+                                    params: { 
+                                        date: selectedDate,
+                                        courtId: court,
+                                        timeSlot: time
+                                    } 
+                                }
+                            );
+                            return {
+                                key: `${selectedDate}-${time}-${court}`,
+                                data: response.data.success ? response.data.data : {
+                                    booked: true,
+                                    bookedBy: "",
+                                    phoneNumber: ""
+                                }
+                            };
+                        } catch (error) {
+                            return {
+                                key: `${selectedDate}-${time}-${court}`,
+                                data: {
+                                    booked: true,
+                                    bookedBy: "",
+                                    phoneNumber: ""
+                                }
+                            };
+                        }
+                    })
+                );
+
+                const results = await Promise.all(statusPromises);
+                const newStatus = {};
+                results.forEach(({key, data}) => {
+                    newStatus[key] = data;
+                });
+                setSlotStatus(newStatus);
+            } catch (error) {
+                console.error("Error fetching slot statuses:", error);
+                toast.error("Failed to load some slot information");
+            }
+        };
+
+        fetchAllSlotStatuses();
+    }, [selectedDate, timeSlots, courts]);
 
     const generateDates = () => {
         const dates = [];
@@ -88,23 +151,6 @@ function CourtBooking() {
         setSelectedDate(fullDate);
         setSelectedSlots({});
     };
-
-    const timeSlots = [
-        "06:00 AM - 07:00 AM",
-        "07:00 AM - 08:00 AM",
-        "08:00 AM - 09:00 AM",
-        "09:00 AM - 10:00 AM",
-        "10:00 AM - 11:00 AM",
-        "03:00 PM - 04:00 PM",
-        "04:00 PM - 05:00 PM",
-        "05:00 PM - 06:00 PM",
-        "06:00 PM - 07:00 PM",
-        "07:00 PM - 08:00 PM",
-        "08:00 PM - 09:00 PM",
-        "09:00 PM - 10:00 PM"
-    ];
-
-    const courts = ["C1", "C2", "C3", "C4"];
 
     const handleCheckboxChange = (event, time, court) => {
         const isChecked = event.target.checked;
@@ -162,7 +208,7 @@ function CourtBooking() {
                     email: user.email || "",
                     phoneNumber: user.phoneNumber || ""
                 },
-                totalAmount: slotsToBook.reduce((sum, slot) => sum + parseInt(slot.price.replace(/\D/g, ''), 10))
+                totalAmount: slotsToBook.reduce((sum, slot) => sum + parseInt(slot.price.replace(/\D/g, ''), 10), 0)
             };
     
             const response = await axios.post(
@@ -250,9 +296,12 @@ function CourtBooking() {
                                         </div>
                                         {courts.map((court) => {
                                             const slotKey = `${selectedDate}-${time}-${court}`;
-                                            console.log("Hey",slotKey)
-                                            const slotData = preBookedSlots[slotKey];
-                                            const isBooked = slotData?.booked;
+                                            const slotData = slotStatus[slotKey] || {
+                                                booked: true,
+                                                bookedBy: "",
+                                                phoneNumber: ""
+                                            };
+                                            const isBooked = slotData.booked;
                                             const isSelected = !!selectedSlots[slotKey];
                                             
                                             return (
@@ -262,11 +311,15 @@ function CourtBooking() {
                                                         className={`w-4 h-4 rounded border-gray-500 bg-gray-800 
                                                                 ${isBooked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         onChange={(event) => !isBooked && handleCheckboxChange(event, time, court)}
-                                                        checked={isBooked || isSelected}
+                                                        checked={isSelected}
                                                         disabled={isBooked}
                                                     />
                                                     {isBooked && (
-                                                        <span className="ml-1 text-xs text-red-500">Booked</span>
+                                                    <div className="ml-1 animate-wiggle">
+                                                        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </div>
                                                     )}
                                                 </div>
                                             );

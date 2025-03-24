@@ -41,7 +41,6 @@ const generateTimeSlots = () => {
 };
 
 // Add Court Details (Booking Slots)
-// Add Court Details (Booking Slots)
 export const addCourtDetails = async (req, res) => {
     try {
         const { action, slots: bookingSlots, userDetails } = req.body;
@@ -161,6 +160,7 @@ export const addCourtDetails = async (req, res) => {
 };
 
 // Get Court Details (Fetching Slots)
+// Get Court Details (Fetching Slots)
 export const getCourtDetails = async (req, res) => {
     const { date, courtId } = req.query;
 
@@ -172,22 +172,49 @@ export const getCourtDetails = async (req, res) => {
     }
 
     try {
+        const allTimeSlots = [
+            "06:00 AM - 07:00 AM",
+            "07:00 AM - 08:00 AM",
+            "08:00 AM - 09:00 AM",
+            "09:00 AM - 10:00 AM",
+            "10:00 AM - 11:00 AM",
+            "03:00 PM - 04:00 PM",
+            "04:00 PM - 05:00 PM",
+            "05:00 PM - 06:00 PM",
+            "06:00 PM - 07:00 PM",
+            "07:00 PM - 08:00 PM",
+            "08:00 PM - 09:00 PM",
+            "09:00 PM - 10:00 PM"
+        ];
+
+        // Initialize with all time slots as available
+        const courtDetails = {};
+        allTimeSlots.forEach(timeSlot => {
+            courtDetails[timeSlot] = {
+                timeSlot,
+                booked: false,
+                price: "₹800",
+                bookedBy: "",
+                court: courtId,
+                date: date
+            };
+        });
+
+        // Get actual data from Firestore
         const snapshot = await db
             .collection("courtDetails")
             .doc(date)
             .collection(courtId)
             .get();
 
-        if (snapshot.empty) {
-            return res.status(404).json({ 
-                success: false,
-                error: "No slots found for this court." 
-            });
-        }
-
-        const courtDetails = {};
-        snapshot.docs.forEach((doc) => {
-            courtDetails[doc.id] = doc.data();
+        // Update with actual booked slots
+        snapshot.docs.forEach(doc => {
+            if (courtDetails[doc.id]) {
+                courtDetails[doc.id] = {
+                    ...courtDetails[doc.id],
+                    ...doc.data()
+                };
+            }
         });
 
         res.status(200).json({ 
@@ -199,6 +226,63 @@ export const getCourtDetails = async (req, res) => {
         res.status(500).json({ 
             success: false,
             error: "Failed to fetch court details." 
+        });
+    }
+};
+
+// Add this new function to check individual slot status
+export const getSlotStatus = async (req, res) => {
+    const { date, courtId, timeSlot } = req.query;
+
+    if (!date || !courtId || !timeSlot) {
+        return res.status(400).json({
+            success: false,
+            error: "Missing required parameters (date, courtId, or timeSlot)"
+        });
+    }
+
+    try {
+        const docRef = db.collection("courtDetails")
+            .doc(date)
+            .collection(courtId)
+            .doc(timeSlot);
+
+        const doc = await docRef.get();
+
+        if (doc.exists) {
+            const data = doc.data();
+            res.status(200).json({
+                success: true,
+                data: {
+                    booked: data.booked || false,
+                    bookedBy: data.bookedBy || "",
+                    phoneNumber: data.phoneNumber || "",
+                    timeSlot: data.timeSlot || timeSlot,
+                    court: courtId,
+                    date: date,
+                    price: data.price || "₹800"
+                }
+            });
+        } else {
+            // If slot doesn't exist in Firestore, it's available
+            res.status(200).json({
+                success: true,
+                data: {
+                    booked: false,
+                    bookedBy: "",
+                    phoneNumber: "",
+                    timeSlot: timeSlot,
+                    court: courtId,
+                    date: date,
+                    price: "₹800"
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error checking slot status:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to check slot status"
         });
     }
 };

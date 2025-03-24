@@ -10,6 +10,7 @@ function CheckoutPage() {
     const navigate = useNavigate();
     const [isProcessing, setIsProcessing] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState("");
+    const [phoneError, setPhoneError] = useState("");
 
     // Get user info from localStorage
     const user = JSON.parse(localStorage.getItem("user-info")) || {};
@@ -24,9 +25,27 @@ function CheckoutPage() {
         return sum + parseInt(slot.price.replace(/\D/g, ''), 10);
     }, 0);
 
+    const handlePhoneChange = (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Remove non-digit characters
+        if (value.length <= 10) {
+            setPhoneNumber(value);
+            if (value.length === 10) {
+                setPhoneError("");
+            } else {
+                setPhoneError(value.length > 0 ? "Phone number must be 10 digits" : "");
+            }
+        }
+    };
+
     const handleCheckout = async () => {
         if (!phoneNumber) {
             toast.error("Please enter your phone number");
+            return;
+        }
+
+        if (phoneNumber.length !== 10) {
+            setPhoneError("Phone number must be 10 digits");
+            toast.error("Please enter a valid 10-digit phone number");
             return;
         }
     
@@ -39,7 +58,7 @@ function CheckoutPage() {
     
         try {
             const bookingData = {
-                action: "book-existing", // Explicit action type
+                action: "book-existing",
                 slots: slotArray.map(slot => ({
                     date: slot.date,
                     timeSlot: slot.timeSlot || slot.time,
@@ -56,10 +75,6 @@ function CheckoutPage() {
                 },
                 totalAmount
             };
-    
-            console.log("======= FINAL BOOKING PAYLOAD =======");
-            console.log(JSON.stringify(bookingData, null, 2));
-            console.log("==============================");
     
             const response = await axios.post(
                 'http://localhost:5001/api/courts/book-slots', 
@@ -81,14 +96,9 @@ function CheckoutPage() {
                 });
             }
         } catch (error) {
-            console.error("Booking error details:", {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-                config: error.config
-            });
+            console.error("Booking error:", error);
             toast.error(error.response?.data?.message || "Booking failed. Please try again.");
-             navigate("/booking-failed")
+            navigate("/booking-failed");
         } finally {
             setIsProcessing(false);
         }
@@ -186,14 +196,21 @@ function CheckoutPage() {
                         
                         <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                             <IoCall className="text-gray-400 mr-3" size={18} />
-                            <input
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                                className="bg-transparent flex-1 focus:outline-none"
-                                placeholder="Enter phone number"
-                                required
-                            />
+                            <div className="flex-1">
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={handlePhoneChange}
+                                    className="bg-transparent w-full focus:outline-none"
+                                    placeholder="Enter 10-digit phone number"
+                                    maxLength={10}
+                                    pattern="[0-9]{10}"
+                                    required
+                                />
+                                {phoneError && (
+                                    <p className="text-red-500 text-xs mt-1">{phoneError}</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -203,11 +220,11 @@ function CheckoutPage() {
             <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4">
                 <button
                     onClick={handleCheckout}
-                    disabled={isProcessing || slotArray.length === 0}
+                    disabled={isProcessing || slotArray.length === 0 || phoneNumber.length !== 10}
                     className={`w-full py-3 rounded-lg font-bold text-white ${
                         isProcessing ? 'bg-orange-400' : 'bg-orange-500 hover:bg-orange-600'
                     } transition-colors ${
-                        slotArray.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                        (slotArray.length === 0 || phoneNumber.length !== 10) ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                     {isProcessing ? (
