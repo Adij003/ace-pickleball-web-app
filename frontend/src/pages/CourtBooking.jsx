@@ -27,7 +27,7 @@ function CourtBooking() {
                 );
         
                 const responses = await Promise.all(slotPromises);
-                console.log("Raw responses from backend:", responses); // Log raw responses
+                console.log("Raw responses from backend:", responses);
         
                 const allSlots = {};
         
@@ -36,13 +36,12 @@ function CourtBooking() {
                         const courtId = courtIds[index];
                         const slotsData = response.data;
                         
-                        console.log(`Data for court ${courtId}:`, slotsData); // Log data for each court
+                        console.log(`Data for court ${courtId}:`, slotsData);
                         
                         Object.entries(slotsData).forEach(([timeSlot, slotInfo]) => {
                             const key = `${selectedDate}-${timeSlot}-${courtId}`;
-                            console.log(`Slot details for ${key}:`, slotInfo); // Log individual slot details
+                            console.log(`Slot details for ${key}:`, slotInfo);
                             
-                            // Store the entire slot info for reference
                             allSlots[key] = {
                                 booked: slotInfo.booked,
                                 bookedBy: slotInfo.bookedBy,
@@ -55,7 +54,7 @@ function CourtBooking() {
                     }
                 });
         
-                console.log("Processed all slots:", allSlots); // Log final processed data
+                console.log("Processed all slots:", allSlots);
                 setPreBookedSlots(allSlots);
             } catch (error) {
                 console.error("Error fetching slots:", error.response?.data || error.message);
@@ -116,7 +115,7 @@ function CourtBooking() {
                 timeSlot: time,
                 court,
                 date: selectedDate,
-                price: "₹800", // Default price if not found
+                price: "₹800",
                 booked: false
             };
 
@@ -142,17 +141,61 @@ function CourtBooking() {
                     textAlign: "center",
                 },
             });
-        } else {
-            try {
-                // You might want to send the selected slots to your backend here
-                // await axios.post('http://localhost:5001/api/courts/book-slots', selectedSlots);
-                // toast.success("Slots booked successfully!");
-                // Then navigate to checkout
+            return;
+        }
+    
+        try {
+            const slotsToBook = Object.values(selectedSlots).map(slot => ({
+                date: slot.date,
+                timeSlot: slot.timeSlot || slot.time,
+                court: slot.court,
+                price: slot.price
+            }));
+    
+            const user = JSON.parse(localStorage.getItem("user-info")) || {};
+    
+            const bookingData = {
+                action: "book-existing",
+                slots: slotsToBook,
+                userDetails: {
+                    name: user.name || "Guest",
+                    email: user.email || "",
+                    phoneNumber: user.phoneNumber || ""
+                },
+                totalAmount: slotsToBook.reduce((sum, slot) => sum + parseInt(slot.price.replace(/\D/g, ''), 10))
+            };
+    
+            const response = await axios.post(
+                'http://localhost:5001/api/courts/book-slots',
+                bookingData
+            );
+    
+            if (response.status === 200) {
+                toast.success("Booking confirmed!");
+                
+                // Update the preBookedSlots state with the new booking info
+                setPreBookedSlots(prev => {
+                    const updatedSlots = { ...prev };
+                    slotsToBook.forEach(slot => {
+                        const key = `${slot.date}-${slot.timeSlot}-${slot.court}`;
+                        updatedSlots[key] = {
+                            ...updatedSlots[key],
+                            booked: true,
+                            bookedBy: user.name || "Guest",
+                            phoneNumber: user.phoneNumber || "",
+                            bookedAt: new Date().toISOString()
+                        };
+                    });
+                    return updatedSlots;
+                });
+    
+                // Clear selected slots
+                setSelectedSlots({});
                 navigate("/checkout", { state: { selectedSlots, selectedDate } });
-            } catch (error) {
-                console.error("Error booking slots:", error);
-                toast.error("Failed to book slots.");
             }
+        } catch (error) {
+            console.error("Booking error:", error);
+            toast.error(error.response?.data?.message || "Failed to book slots.");
         }
     };
 
@@ -196,7 +239,6 @@ function CourtBooking() {
                                 ))}
                             </div>
                             {timeSlots.map((time) => {
-                                // Find the price for this time slot (from any court)
                                 const sampleSlotKey = `${selectedDate}-${time}-C1`;
                                 const price = preBookedSlots[sampleSlotKey]?.price || "₹800";
                                 
@@ -208,19 +250,24 @@ function CourtBooking() {
                                         </div>
                                         {courts.map((court) => {
                                             const slotKey = `${selectedDate}-${time}-${court}`;
-                                            const isBooked = preBookedSlots[slotKey]?.booked;
+                                            console.log("Hey",slotKey)
+                                            const slotData = preBookedSlots[slotKey];
+                                            const isBooked = slotData?.booked;
                                             const isSelected = !!selectedSlots[slotKey];
                                             
                                             return (
-                                                <div key={court} className="flex justify-center">
+                                                <div key={court} className="flex justify-center items-center">
                                                     <input
                                                         type="checkbox"
                                                         className={`w-4 h-4 rounded border-gray-500 bg-gray-800 
-                                                        ${isBooked ? 'checked:bg-red-500 cursor-not-allowed' : ''}`}
-                                                        onChange={(event) => handleCheckboxChange(event, time, court)}
+                                                                ${isBooked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        onChange={(event) => !isBooked && handleCheckboxChange(event, time, court)}
                                                         checked={isBooked || isSelected}
                                                         disabled={isBooked}
                                                     />
+                                                    {isBooked && (
+                                                        <span className="ml-1 text-xs text-red-500">Booked</span>
+                                                    )}
                                                 </div>
                                             );
                                         })}

@@ -1,5 +1,5 @@
 import { db } from "../config/firebase.js";
-import dayjs from "dayjs"; 
+import dayjs from "dayjs";
 
 // Generate Time Slots for the Next 6 Days
 const generateTimeSlots = () => {
@@ -30,7 +30,9 @@ const generateTimeSlots = () => {
                 timeSlot: time,
                 booked: false,
                 price: "₹800",
-                bookedBy: "" // Empty by default
+                bookedBy: "",
+                phoneNumber: "",
+                bookedAt: null
             }));
         });
     }
@@ -39,45 +41,134 @@ const generateTimeSlots = () => {
 };
 
 // Add Court Details (Booking Slots)
+// Add Court Details (Booking Slots)
 export const addCourtDetails = async (req, res) => {
-    const slots = generateTimeSlots();
-
     try {
-        const batch = db.batch();
+        const { action, slots: bookingSlots, userDetails } = req.body;
 
-        for (const date of Object.keys(slots)) {
-            for (const court of Object.keys(slots[date])) {
-                const courtRef = db.collection("courtDetails").doc(date).collection(court);
+        if (action === "book-existing") {
+            // Validate required fields
+            if (!bookingSlots || !userDetails) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Missing required booking data"
+                });
+            }
 
-                const existingSlots = await courtRef.get();
+            const batch = db.batch();
+            const bookingDate = new Date().toISOString();
+
+            // 1. Update each slot in courtDetails
+            for (const slot of bookingSlots) {
+                const slotRef = db.collection("courtDetails")
+                    .doc(slot.date)
+                    .collection(slot.court)
+                    .doc(slot.timeSlot);
+
+                // First check if slot exists
+                const slotDoc = await slotRef.get();
                 
-                // Skip this date-court combination if slots already exist
-                if (!existingSlots.empty) {
-                    console.log(`Slots for ${date} - ${court} already exist. Skipping...`);
+                if (!slotDoc.exists) {
+                    console.log(`Slot not found: ${slot.date} - ${slot.court} - ${slot.timeSlot}`);
                     continue;
                 }
 
-                slots[date][court].forEach((slot) => {
-                    const slotRef = courtRef.doc(slot.timeSlot);
-                    batch.set(slotRef, slot);
-                });
-            }
-        }
+                const currentData = slotDoc.data();
+                
+                if (currentData.booked) {
+                    console.log(`Slot already booked: ${slot.date} - ${slot.court} - ${slot.timeSlot}`);
+                    continue;
+                }
 
-        await batch.commit();
-        res.status(201).json({ message: "Slots generated successfully (only new slots added)." });
+                // Prepare update data with optional userEmail
+                const updateData = {
+                    booked: true,
+                    bookedBy: userDetails.name,
+                    phoneNumber: userDetails.phoneNumber,
+                    bookedAt: bookingDate
+                };
+
+                // Only add userEmail if it exists and is not undefined
+                if (slot.userEmail) {
+                    updateData.userEmail = slot.userEmail;
+                }
+
+                batch.update(slotRef, updateData);
+            }
+
+            // 2. Create a booking record
+            const bookingRef = db.collection("bookings").doc();
+            const bookingData = {
+                bookingId: bookingRef.id,
+                slots: bookingSlots.map(slot => ({
+                    date: slot.date,
+                    timeSlot: slot.timeSlot,
+                    court: slot.court,
+                    price: slot.price
+                })),
+                userDetails,
+                totalAmount: req.body.totalAmount,
+                status: "confirmed",
+                createdAt: bookingDate,
+                updatedAt: bookingDate
+            };
+
+            batch.set(bookingRef, bookingData);
+
+            await batch.commit();
+            
+            return res.status(200).json({
+                success: true,
+                message: "Slots booked successfully",
+                bookingId: bookingRef.id
+            });
+        } else {
+            // Original slot generation logic
+            const slots = generateTimeSlots();
+            const batch = db.batch();
+
+            for (const date of Object.keys(slots)) {
+                for (const court of Object.keys(slots[date])) {
+                    const courtRef = db.collection("courtDetails").doc(date).collection(court);
+
+                    const existingSlots = await courtRef.get();
+                    
+                    if (!existingSlots.empty) {
+                        console.log(`Slots for ${date} - ${court} already exist. Skipping...`);
+                        continue;
+                    }
+
+                    slots[date][court].forEach((slot) => {
+                        const slotRef = courtRef.doc(slot.timeSlot);
+                        batch.set(slotRef, slot);
+                    });
+                }
+            }
+
+            await batch.commit();
+            return res.status(201).json({ 
+                success: true,
+                message: "Slots generated successfully" 
+            });
+        }
     } catch (error) {
-        console.error("Error generating slots:", error);
-        res.status(500).json({ error: "Failed to generate slots." });
+        console.error("Error in court operation:", error);
+        return res.status(500).json({ 
+            success: false,
+            error: error.message || "Failed to process request" 
+        });
     }
 };
 
 // Get Court Details (Fetching Slots)
 export const getCourtDetails = async (req, res) => {
-    const { date, courtId } = req.query; // Include `courtId` in query
+    const { date, courtId } = req.query;
 
     if (!date || !courtId) {
-        return res.status(400).json({ error: "Invalid date or court ID." });
+        return res.status(400).json({ 
+            success: false,
+            error: "Invalid date or court ID." 
+        });
     }
 
     try {
@@ -88,7 +179,10 @@ export const getCourtDetails = async (req, res) => {
             .get();
 
         if (snapshot.empty) {
-            return res.status(404).json({ error: "No slots found for this court." });
+            return res.status(404).json({ 
+                success: false,
+                error: "No slots found for this court." 
+            });
         }
 
         const courtDetails = {};
@@ -96,9 +190,15 @@ export const getCourtDetails = async (req, res) => {
             courtDetails[doc.id] = doc.data();
         });
 
-        res.status(200).json(courtDetails);
+        res.status(200).json({ 
+            success: true,
+            data: courtDetails 
+        });
     } catch (error) {
         console.error("Error fetching court details:", error);
-        res.status(500).json({ error: "Failed to fetch court details." });
+        res.status(500).json({ 
+            success: false,
+            error: "Failed to fetch court details." 
+        });
     }
 };
