@@ -4,14 +4,14 @@ dotenv.config();
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import admin from "firebase-admin";
-// import serviceAccount from "./firebaseServiceAccountKey.json" assert { type: 'json' };
+import serviceAccount from "./firebaseServiceAccountKey.json" assert { type: 'json' };
 
 import fs from "fs";
 
 // const serviceAccount = JSON.parse(fs.readFileSync("./config/firebaseServiceAccountKey.json", "utf-8"));
 
-const serviceAccountPath = "/etc/secrets/firebaseServiceAccountKey.json";
-const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+// const serviceAccountPath = "/etc/secrets/firebaseServiceAccountKey.json";
+// const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
 
 // Firebase Configuration
 const firebaseConfig = {

@@ -175,74 +175,21 @@ function CourtBooking() {
         });
     };
 
-    const handleNext = async (event) => {
+    const handleNext = (event) => {
+        event.preventDefault();
+        
         if (Object.keys(selectedSlots).length === 0) {
-            event.preventDefault();
-            toast.error("Please select at least one slot!", {
-                position: "top-center",
-                autoClose: 2000,
-                style: {
-                    width: "360px",
-                    margin: "20px auto",
-                    textAlign: "center",
-                },
-            });
+            toast.error("Please select at least one slot!");
             return;
         }
     
-        try {
-            const slotsToBook = Object.values(selectedSlots).map(slot => ({
-                date: slot.date,
-                timeSlot: slot.timeSlot || slot.time,
-                court: slot.court,
-                price: slot.price
-            }));
-    
-            const user = JSON.parse(localStorage.getItem("user-info")) || {};
-    
-            const bookingData = {
-                action: "book-existing",
-                slots: slotsToBook,
-                userDetails: {
-                    name: user.name || "Guest",
-                    email: user.email || "",
-                    phoneNumber: user.phoneNumber || ""
-                },
-                totalAmount: slotsToBook.reduce((sum, slot) => sum + parseInt(slot.price.replace(/\D/g, ''), 10), 0)
-            };
-    
-            const response = await axios.post(
-                'http://localhost:5001/api/courts/book-slots',
-                bookingData
-            );
-    
-            if (response.status === 200) {
-                toast.success("Booking confirmed!");
-                
-                // Update the preBookedSlots state with the new booking info
-                setPreBookedSlots(prev => {
-                    const updatedSlots = { ...prev };
-                    slotsToBook.forEach(slot => {
-                        const key = `${slot.date}-${slot.timeSlot}-${slot.court}`;
-                        updatedSlots[key] = {
-                            ...updatedSlots[key],
-                            booked: true,
-                            bookedBy: user.name || "Guest",
-                            phoneNumber: user.phoneNumber || "",
-                            bookedAt: new Date().toISOString()
-                        };
-                    });
-                    return updatedSlots;
-                });
-    
-                // Clear selected slots
-                setSelectedSlots({});
-                navigate("/checkout", { state: { selectedSlots, selectedDate } });
-            }
-        } catch (error) {
-            console.error("Booking error:", error);
-            toast.error(error.response?.data?.message || "Failed to book slots.");
-        }
+        // Simply navigate to checkout with the selected slots
+        navigate("/checkout", { 
+            state: { 
+                selectedSlots,
+                selectedDate 
+            } 
+        });
     };
 
     return (

@@ -29,10 +29,12 @@ const generateTimeSlots = () => {
             slots[date][court] = timeSlots.map((time) => ({
                 timeSlot: time,
                 booked: false,
-                price: "₹800",
+                price: 800, // Changed to number instead of string
+                priceDisplay: "₹800", // Added display version
                 bookedBy: "",
                 phoneNumber: "",
-                bookedAt: null
+                bookedAt: null,
+                courtId: court
             }));
         });
     }
@@ -40,89 +42,153 @@ const generateTimeSlots = () => {
     return slots;
 };
 
+// Enhanced validateBookingData
+const validateBookingData = (bookingSlots, userDetails) => {
+    if (!bookingSlots || !Array.isArray(bookingSlots) || bookingSlots.length === 0) {
+        return "No slots selected for booking";
+    }
+
+    // Validate each slot's price
+    for (const slot of bookingSlots) {
+        if (typeof slot.price !== 'number' && typeof slot.price !== 'string') {
+            return `Invalid price format for slot ${slot.timeSlot}`;
+        }
+    }
+
+    if (!userDetails || !userDetails.name || !userDetails.phoneNumber) {
+        return "Missing required user details (name and phone number)";
+    }
+
+    if (!/^\d{10}$/.test(userDetails.phoneNumber)) {
+        return "Phone number must be 10 digits";
+    }
+
+    return null;
+};
+
+// Convert price to number safely
+const convertPriceToNumber = (price) => {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+        // Remove any non-digit characters including ₹ symbol
+        const numericValue = parseInt(price.replace(/[^\d]/g, ''), 10);
+        return isNaN(numericValue) ? 800 : numericValue; // Default to 800 if conversion fails
+    }
+    return 800; // Default value
+};
+
 // Add Court Details (Booking Slots)
 export const addCourtDetails = async (req, res) => {
     try {
-        const { action, slots: bookingSlots, userDetails } = req.body;
+        console.log("Incoming booking request:", req.body);
+        const { action, slots: incomingSlots, userDetails, totalAmount } = req.body;
 
         if (action === "book-existing") {
-            // Validate required fields
-            if (!bookingSlots || !userDetails) {
+            // Validate booking data first
+            const validationError = validateBookingData(incomingSlots, userDetails);
+            if (validationError) {
+                console.log("Validation failed:", validationError);
                 return res.status(400).json({
                     success: false,
-                    error: "Missing required booking data"
+                    error: validationError
                 });
             }
 
+            // Process slots to ensure proper price format
+            const bookingSlots = incomingSlots.map(slot => ({
+                ...slot,
+                price: convertPriceToNumber(slot.price),
+                priceDisplay: `₹${convertPriceToNumber(slot.price)}` // Add display version
+            }));
+
             const batch = db.batch();
             const bookingDate = new Date().toISOString();
+            const unavailableSlots = [];
 
-            // 1. Update each slot in courtDetails
+            // 1. Verify all slots are available
             for (const slot of bookingSlots) {
                 const slotRef = db.collection("courtDetails")
                     .doc(slot.date)
                     .collection(slot.court)
                     .doc(slot.timeSlot);
 
-                // First check if slot exists
                 const slotDoc = await slotRef.get();
                 
                 if (!slotDoc.exists) {
-                    console.log(`Slot not found: ${slot.date} - ${slot.court} - ${slot.timeSlot}`);
+                    unavailableSlots.push(`${slot.date} - ${slot.court} - ${slot.timeSlot}`);
                     continue;
                 }
 
                 const currentData = slotDoc.data();
-                
                 if (currentData.booked) {
-                    console.log(`Slot already booked: ${slot.date} - ${slot.court} - ${slot.timeSlot}`);
-                    continue;
+                    unavailableSlots.push(`${slot.date} - ${slot.court} - ${slot.timeSlot}`);
                 }
+            }
 
-                // Prepare update data with optional userEmail
-                const updateData = {
+            if (unavailableSlots.length > 0) {
+                console.log("Unavailable slots:", unavailableSlots);
+                return res.status(400).json({
+                    success: false,
+                    error: "Some slots are no longer available",
+                    unavailableSlots
+                });
+            }
+
+            // 2. Update slots status
+            for (const slot of bookingSlots) {
+                const slotRef = db.collection("courtDetails")
+                    .doc(slot.date)
+                    .collection(slot.court)
+                    .doc(slot.timeSlot);
+
+                batch.update(slotRef, {
                     booked: true,
                     bookedBy: userDetails.name,
                     phoneNumber: userDetails.phoneNumber,
+                    userEmail: userDetails.email || null,
                     bookedAt: bookingDate
-                };
-
-                // Only add userEmail if it exists and is not undefined
-                if (slot.userEmail) {
-                    updateData.userEmail = slot.userEmail;
-                }
-
-                batch.update(slotRef, updateData);
+                });
             }
 
-            // 2. Create a booking record
+            // 3. Create booking record
             const bookingRef = db.collection("bookings").doc();
             const bookingData = {
                 bookingId: bookingRef.id,
+                user: {
+                    userId: req.user?.uid || "guest",
+                    name: userDetails.name,
+                    email: userDetails.email,
+                    phoneNumber: userDetails.phoneNumber
+                },
                 slots: bookingSlots.map(slot => ({
                     date: slot.date,
                     timeSlot: slot.timeSlot,
                     court: slot.court,
-                    price: slot.price
+                    courtId: slot.courtId,
+                    price: slot.price,
+                    priceDisplay: slot.priceDisplay
                 })),
-                userDetails,
-                totalAmount: req.body.totalAmount,
+                totalAmount: convertPriceToNumber(totalAmount),
+                totalAmountDisplay: `₹${convertPriceToNumber(totalAmount)}`,
                 status: "confirmed",
+                paymentStatus: "pending",
                 createdAt: bookingDate,
                 updatedAt: bookingDate
             };
 
             batch.set(bookingRef, bookingData);
-
             await batch.commit();
             
+            console.log("Booking successful:", bookingRef.id);
             return res.status(200).json({
                 success: true,
-                message: "Slots booked successfully",
-                bookingId: bookingRef.id
+                message: "Booking confirmed successfully",
+                bookingId: bookingRef.id,
+                bookingData
             });
+
         } else {
-            // Original slot generation logic
+            // Slot generation logic
             const slots = generateTimeSlots();
             const batch = db.batch();
 
@@ -154,12 +220,12 @@ export const addCourtDetails = async (req, res) => {
         console.error("Error in court operation:", error);
         return res.status(500).json({ 
             success: false,
-            error: error.message || "Failed to process request" 
+            error: error.message || "Failed to process booking",
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 };
 
-// Get Court Details (Fetching Slots)
 // Get Court Details (Fetching Slots)
 export const getCourtDetails = async (req, res) => {
     const { date, courtId } = req.query;
@@ -193,7 +259,8 @@ export const getCourtDetails = async (req, res) => {
             courtDetails[timeSlot] = {
                 timeSlot,
                 booked: false,
-                price: "₹800",
+                price: 800,
+                priceDisplay: "₹800",
                 bookedBy: "",
                 court: courtId,
                 date: date
@@ -212,7 +279,9 @@ export const getCourtDetails = async (req, res) => {
             if (courtDetails[doc.id]) {
                 courtDetails[doc.id] = {
                     ...courtDetails[doc.id],
-                    ...doc.data()
+                    ...doc.data(),
+                    // Ensure priceDisplay exists
+                    priceDisplay: doc.data().priceDisplay || `₹${doc.data().price || 800}`
                 };
             }
         });
@@ -230,7 +299,7 @@ export const getCourtDetails = async (req, res) => {
     }
 };
 
-// Add this new function to check individual slot status
+// Check individual slot status
 export const getSlotStatus = async (req, res) => {
     const { date, courtId, timeSlot } = req.query;
 
@@ -260,7 +329,8 @@ export const getSlotStatus = async (req, res) => {
                     timeSlot: data.timeSlot || timeSlot,
                     court: courtId,
                     date: date,
-                    price: data.price || "₹800"
+                    price: data.price || 800,
+                    priceDisplay: data.priceDisplay || `₹${data.price || 800}`
                 }
             });
         } else {
@@ -274,7 +344,8 @@ export const getSlotStatus = async (req, res) => {
                     timeSlot: timeSlot,
                     court: courtId,
                     date: date,
-                    price: "₹800"
+                    price: 800,
+                    priceDisplay: "₹800"
                 }
             });
         }

@@ -12,65 +12,59 @@ function CheckoutPage() {
     const [phoneNumber, setPhoneNumber] = useState("");
     const [phoneError, setPhoneError] = useState("");
 
-    // Check if user is logged in
+    // Authentication and user data
     const isLoggedIn = localStorage.getItem("isAuthenticated") === "true";
-    
-    // Get user info from localStorage if logged in
     const user = isLoggedIn ? JSON.parse(localStorage.getItem("user-info")) || {} : {};
-    const { name = "Guest", email = "" } = user;
-    const firstName = name.split(' ')[0];
+    const { name = "Guest", email = "", uid: userId = "guest" } = user;
 
-    // Convert selectedSlots object to array
+    // Booking data preparation
     const slotArray = Object.values(selectedSlots);
+    const totalAmount = slotArray.reduce((sum, slot) => (
+        sum + parseInt(slot.price.replace(/\D/g, ''), 10)
+    ), 0);
 
-    // Calculate total amount
-    const totalAmount = slotArray.reduce((sum, slot) => {
-        return sum + parseInt(slot.price.replace(/\D/g, ''), 10);
-    }, 0);
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    };
 
     const handlePhoneChange = (e) => {
-        const value = e.target.value.replace(/\D/g, ''); // Remove non-digit characters
+        const value = e.target.value.replace(/\D/g, '');
         if (value.length <= 10) {
             setPhoneNumber(value);
-            if (value.length === 10) {
-                setPhoneError("");
-            } else {
-                setPhoneError(value.length > 0 ? "Phone number must be 10 digits" : "");
-            }
+            setPhoneError(value.length === 10 ? "" : "Phone number must be 10 digits");
         }
     };
 
     const handleCheckout = async () => {
+        // Validation
         if (!isLoggedIn) {
-            // Redirect to login with current state to return here after login
-            navigate("/login", {
-                state: {
-                    fromCheckout: true,
-                    selectedSlots,
-                    selectedDate
-                }
+            navigate("/login", { 
+                state: { 
+                    fromCheckout: true, 
+                    selectedSlots, 
+                    selectedDate 
+                } 
             });
             return;
         }
 
-        if (!phoneNumber) {
-            toast.error("Please enter your phone number");
+        if (!phoneNumber || phoneNumber.length !== 10) {
+            setPhoneError("Valid 10-digit phone number required");
+            toast.error("Please enter a valid phone number");
             return;
         }
 
-        if (phoneNumber.length !== 10) {
-            setPhoneError("Phone number must be 10 digits");
-            toast.error("Please enter a valid 10-digit phone number");
-            return;
-        }
-    
         if (slotArray.length === 0) {
             toast.error("No slots selected for booking");
             return;
         }
-    
+
         setIsProcessing(true);
-    
+
         try {
             const bookingData = {
                 action: "book-existing",
@@ -78,50 +72,57 @@ function CheckoutPage() {
                     date: slot.date,
                     timeSlot: slot.timeSlot || slot.time,
                     court: slot.court,
-                    bookedBy: firstName,
-                    phoneNumber,
-                    userEmail: email,
-                    price: slot.price
+                    courtId: slot.courtId || slot.court,
+                    price: typeof slot.price === 'string' ? 
+                        parseInt(slot.price.replace(/\D/g, ''), 10) : 
+                        slot.price,
+                    userEmail: email
                 })),
                 userDetails: {
+                    userId,
                     name,
                     email,
                     phoneNumber
                 },
-                totalAmount
+                totalAmount,
+                paymentStatus: "pending"
             };
-    
+
+            // API call
             const response = await axios.post(
-                'http://localhost:5001/api/courts/book-slots', 
+                'http://localhost:5001/api/courts/book-slots',
                 bookingData,
                 {
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 }
             );
-    
-            if (response.status === 200 || response.status === 201) {
-                toast.success("Booking confirmed successfully!");
+
+            if (response.data.success) {
+                toast.success("Booking confirmed!");
                 navigate("/booking-confirmation", {
                     state: {
-                        bookingDetails: bookingData,
-                        referenceId: response.data.bookingId || `TEMP-${Date.now()}`
+                        bookingDetails: response.data.bookingData,
+                        referenceId: response.data.bookingId
                     }
                 });
             }
         } catch (error) {
             console.error("Booking error:", error);
-            toast.error(error.response?.data?.message || "Booking failed. Please try again.");
-            navigate("/booking-failed");
+            const errorMessage = error.response?.data?.error || 
+                               error.response?.data?.message || 
+                               "Booking failed. Please try again.";
+            
+            toast.error(errorMessage);
+            
+            if (error.response?.status === 401) {
+                navigate("/login");
+            }
         } finally {
             setIsProcessing(false);
         }
-    };
-
-    const formatDate = (dateString) => {
-        const options = { day: '2-digit', month: 'short', year: 'numeric' };
-        return new Date(dateString).toLocaleDateString('en-GB', options);
     };
 
     return (
@@ -136,7 +137,7 @@ function CheckoutPage() {
                         <IoArrowBack size={24} />
                     </button>
                     <h1 className="text-xl font-bold text-gray-800">Confirm Booking</h1>
-                    <div className="w-6"></div> {/* Spacer */}
+                    <div className="w-6"></div>
                 </div>
             </div>
 
@@ -149,14 +150,12 @@ function CheckoutPage() {
                     </h2>
                     
                     <div className="space-y-4">
-                        {/* Date Display */}
                         <div className="bg-amber-50 p-3 rounded-lg">
                             <p className="font-semibold text-amber-800">
                                 {formatDate(selectedDate)}
                             </p>
                         </div>
 
-                        {/* Slots Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
@@ -182,7 +181,6 @@ function CheckoutPage() {
                             </table>
                         </div>
 
-                        {/* Total Amount */}
                         <div className="flex justify-between items-center pt-2">
                             <span className="font-bold text-gray-700">Total</span>
                             <span className="text-lg font-bold text-orange-500">
@@ -192,7 +190,7 @@ function CheckoutPage() {
                     </div>
                 </div>
 
-                {/* User Details Card - Only show if logged in */}
+                {/* User Details Card */}
                 {isLoggedIn ? (
                     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -220,7 +218,6 @@ function CheckoutPage() {
                                         className="bg-transparent w-full focus:outline-none"
                                         placeholder="Enter 10-digit phone number"
                                         maxLength={10}
-                                        pattern="[0-9]{10}"
                                         required
                                     />
                                     {phoneError && (
@@ -250,14 +247,20 @@ function CheckoutPage() {
                     className={`w-full py-3 rounded-lg font-bold text-white ${
                         isProcessing ? 'bg-orange-400' : 'bg-orange-500 hover:bg-orange-600'
                     } transition-colors ${
-                        (slotArray.length === 0 || (isLoggedIn && phoneNumber.length !== 10)) ? 'opacity-50 cursor-not-allowed' : ''
+                        (slotArray.length === 0 || (isLoggedIn && phoneNumber.length !== 10)) ? 
+                        'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                     {isProcessing ? (
                         <span className="flex items-center justify-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" 
+                                 xmlns="http://www.w3.org/2000/svg" 
+                                 fill="none" 
+                                 viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" 
+                                        stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" 
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                             Processing...
                         </span>
