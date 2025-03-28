@@ -1,3 +1,4 @@
+import cron from "node-cron";
 import { db } from "../config/firebase.js";
 import dayjs from "dayjs";
 
@@ -65,6 +66,36 @@ const validateBookingData = (bookingSlots, userDetails) => {
 
     return null;
 };
+
+const addSlotsToFirestore = async () => {
+    try {
+        console.log("Running scheduled job: Adding time slots...");
+        const slots = generateTimeSlots();
+        const batch = db.batch();
+
+        for (const date in slots) {
+            for (const court in slots[date]) {
+                const courtRef = db.collection("courtDetails").doc(date).collection(court);
+                
+                slots[date][court].forEach((slot) => {
+                    batch.set(courtRef.doc(slot.timeSlot), slot, { merge: true }); // Efficient way to prevent overwrites
+                });
+            }
+        }
+
+        await batch.commit();
+        console.log("Time slots added successfully. scheduling is working");
+    } catch (error) {
+        console.error("Error adding time slots:", error);
+    }
+};
+
+
+cron.schedule("0 0 * * *", async () => {
+    await addSlotsToFirestore();
+}, {
+    timezone: "Asia/Kolkata" // Ensures it runs at local time
+});
 
 // Convert price to number safely
 const convertPriceToNumber = (price) => {
