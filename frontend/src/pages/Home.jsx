@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import CardComponent from '../components/CardComponent';
 import TypewriterText from '../components/TypewriterText';
 import AceHeading from '../components/AceHeading';
@@ -15,14 +16,48 @@ function Home() {
         localStorage.getItem("isAuthenticated") === "true"
     );
 
+    useEffect(() => {
+        const fetchUserIdByEmail = async () => {
+            if (isLoggedIn) {
+                try {
+                    const userInfo = JSON.parse(localStorage.getItem("user-info"));
+                    const userEmail = userInfo?.email;
+                    
+                    if (userEmail) {
+                        const response = await axios.get(`http://localhost:5001/api/users/email/${encodeURIComponent(userEmail)}`);
+                        
+                        if (response.data && response.data.userId) {
+                            // Store both userId and user data in sessionStorage
+                            sessionStorage.setItem('userId', response.data.userId);
+                            sessionStorage.setItem('userData', JSON.stringify({
+                                name: response.data.name,
+                                email: response.data.email,
+                                picture: response.data.picture,
+                                createdAt: response.data.createdAt
+                            }));
+                            console.log('User data stored in session:', response.data);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                }
+            }
+        };
+
+        fetchUserIdByEmail();
+    }, [isLoggedIn]);
+
     const handleNavDrawer = () => {
         setIsOpen(true);
     };
 
     const handleLogout = () => {
+        // Clear all authentication data
         localStorage.removeItem("isAuthenticated");
         localStorage.removeItem("user-info");
         localStorage.removeItem("token");
+        sessionStorage.removeItem('userId');
+        sessionStorage.removeItem('userData');
         setIsLoggedIn(false);
         setIsOpen(false);
         navigate("/");
@@ -33,11 +68,19 @@ function Home() {
         navigate("/login");
     };
 
+    // Get user data from sessionStorage if available
+    const userData = isLoggedIn && sessionStorage.getItem('userData') 
+        ? JSON.parse(sessionStorage.getItem('userData'))
+        : null;
+
     return (
         <div className="relative min-h-screen">
             {/* Main Content */}
             <div className="p-4 container mx-auto">
-                <Header handleNavDrawer={handleNavDrawer} />
+                <Header 
+                    handleNavDrawer={handleNavDrawer} 
+                    userData={userData}  // Pass user data to header if needed
+                />
                 
                 {/* Hero Section */}
                 <div className="mt-6 mb-8">
@@ -91,6 +134,22 @@ function Home() {
                             
                             {/* Navigation Items */}
                             <div className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+                                {userData && (
+                                    <div className="px-4 py-3 mx-2 mb-4 rounded-xl bg-gray-50">
+                                        <div className="flex items-center">
+                                            <img 
+                                                src={userData.picture} 
+                                                alt="Profile" 
+                                                className="w-10 h-10 rounded-full mr-3"
+                                            />
+                                            <div>
+                                                <p className="font-medium text-gray-800">{userData.name}</p>
+                                                <p className="text-xs text-gray-500">{userData.email}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <Link 
                                     to="/about-us" 
                                     className="flex items-center px-4 py-3 rounded-xl mx-2 bg-gray-50 hover:bg-gray-100 text-gray-800 transition-all duration-200 group hover:shadow-sm"
