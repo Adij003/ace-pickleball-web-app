@@ -93,6 +93,7 @@ const addSlotsToFirestore = async () => {
 
 cron.schedule("0 0 * * *", async () => {
     await addSlotsToFirestore();
+    console.log('Scheduler added')
 }, {
     timezone: "Asia/Kolkata" // Ensures it runs at local time
 });
