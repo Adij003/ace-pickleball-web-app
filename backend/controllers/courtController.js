@@ -30,9 +30,10 @@ const generateTimeSlots = () => {
             slots[date][court] = timeSlots.map((time) => ({
                 timeSlot: time,
                 booked: false,
-                price: 800, // Changed to number instead of string
-                priceDisplay: "₹800", // Added display version
+                price: 800,
+                priceDisplay: "₹800",
                 bookedBy: "",
+                userId: "",
                 phoneNumber: "",
                 bookedAt: null,
                 courtId: court
@@ -43,13 +44,12 @@ const generateTimeSlots = () => {
     return slots;
 };
 
-// Enhanced validateBookingData
-const validateBookingData = (bookingSlots, userDetails) => {
+// Enhanced validateBookingData with userId validation
+const validateBookingData = (bookingSlots, userDetails, isAuthenticated) => {
     if (!bookingSlots || !Array.isArray(bookingSlots) || bookingSlots.length === 0) {
         return "No slots selected for booking";
     }
 
-    // Validate each slot's price
     for (const slot of bookingSlots) {
         if (typeof slot.price !== 'number' && typeof slot.price !== 'string') {
             return `Invalid price format for slot ${slot.timeSlot}`;
@@ -62,6 +62,11 @@ const validateBookingData = (bookingSlots, userDetails) => {
 
     if (!/^\d{10}$/.test(userDetails.phoneNumber)) {
         return "Phone number must be 10 digits";
+    }
+
+    // Validate userId for authenticated users
+    if (isAuthenticated && (!userDetails.userId || userDetails.userId === 'guest')) {
+        return "User authentication error";
     }
 
     return null;
@@ -78,66 +83,60 @@ const addSlotsToFirestore = async () => {
                 const courtRef = db.collection("courtDetails").doc(date).collection(court);
                 
                 slots[date][court].forEach((slot) => {
-                    batch.set(courtRef.doc(slot.timeSlot), slot, { merge: true }); // Efficient way to prevent overwrites
+                    batch.set(courtRef.doc(slot.timeSlot), slot, { merge: true });
                 });
             }
         }
 
         await batch.commit();
-        console.log("Time slots added successfully. scheduling is working");
+        console.log("Time slots added successfully");
     } catch (error) {
         console.error("Error adding time slots:", error);
     }
 };
 
-
-cron.schedule("0 0 * * *", async () => {
-    await addSlotsToFirestore();
-    console.log('Scheduler added')
-}, {
-    timezone: "Asia/Kolkata" // Ensures it runs at local time
+// Schedule daily at midnight IST
+cron.schedule("0 0 * * *", addSlotsToFirestore, {
+    timezone: "Asia/Kolkata"
 });
 
-// Convert price to number safely
 const convertPriceToNumber = (price) => {
     if (typeof price === 'number') return price;
     if (typeof price === 'string') {
-        // Remove any non-digit characters including ₹ symbol
         const numericValue = parseInt(price.replace(/[^\d]/g, ''), 10);
-        return isNaN(numericValue) ? 800 : numericValue; // Default to 800 if conversion fails
+        return isNaN(numericValue) ? 800 : numericValue;
     }
-    return 800; // Default value
+    return 800;
 };
 
-// Add Court Details (Booking Slots)
+// Main booking function
 export const addCourtDetails = async (req, res) => {
     try {
         console.log("Incoming booking request:", req.body);
         const { action, slots: incomingSlots, userDetails, totalAmount } = req.body;
+        const isAuthenticated = !!req.user?.uid;
 
         if (action === "book-existing") {
-            // Validate booking data first
-            const validationError = validateBookingData(incomingSlots, userDetails);
+            // Validate with authentication status
+            const validationError = validateBookingData(incomingSlots, userDetails, isAuthenticated);
             if (validationError) {
-                console.log("Validation failed:", validationError);
                 return res.status(400).json({
                     success: false,
                     error: validationError
                 });
             }
 
-            // Process slots to ensure proper price format
             const bookingSlots = incomingSlots.map(slot => ({
                 ...slot,
                 price: convertPriceToNumber(slot.price),
-                priceDisplay: `₹${convertPriceToNumber(slot.price)}` // Add display version
+                priceDisplay: `₹${convertPriceToNumber(slot.price)}`
             }));
 
             const batch = db.batch();
             const bookingDate = new Date().toISOString();
             const unavailableSlots = [];
 
-            // 1. Verify all slots are available
+            // Verify slot availability
             for (const slot of bookingSlots) {
                 const slotRef = db.collection("courtDetails")
                     .doc(slot.date)
@@ -146,19 +145,12 @@ export const addCourtDetails = async (req, res) => {
 
                 const slotDoc = await slotRef.get();
                 
-                if (!slotDoc.exists) {
-                    unavailableSlots.push(`${slot.date} - ${slot.court} - ${slot.timeSlot}`);
-                    continue;
-                }
-
-                const currentData = slotDoc.data();
-                if (currentData.booked) {
+                if (!slotDoc.exists || slotDoc.data().booked) {
                     unavailableSlots.push(`${slot.date} - ${slot.court} - ${slot.timeSlot}`);
                 }
             }
 
             if (unavailableSlots.length > 0) {
-                console.log("Unavailable slots:", unavailableSlots);
                 return res.status(400).json({
                     success: false,
                     error: "Some slots are no longer available",
@@ -166,7 +158,7 @@ export const addCourtDetails = async (req, res) => {
                 });
             }
 
-            // 2. Update slots status
+            // Update slots with booking info
             for (const slot of bookingSlots) {
                 const slotRef = db.collection("courtDetails")
                     .doc(slot.date)
@@ -176,30 +168,24 @@ export const addCourtDetails = async (req, res) => {
                 batch.update(slotRef, {
                     booked: true,
                     bookedBy: userDetails.name,
+                    userId: userDetails.userId,
                     phoneNumber: userDetails.phoneNumber,
-                    userEmail: userDetails.email || null,
+                    userEmail: userDetails.email,
                     bookedAt: bookingDate
                 });
             }
 
-            // 3. Create booking record
+            // Create booking record
             const bookingRef = db.collection("bookings").doc();
             const bookingData = {
                 bookingId: bookingRef.id,
                 user: {
-                    userId: req.user?.uid || "guest",
+                    userId: isAuthenticated ? req.user.uid : userDetails.userId,
                     name: userDetails.name,
                     email: userDetails.email,
                     phoneNumber: userDetails.phoneNumber
                 },
-                slots: bookingSlots.map(slot => ({
-                    date: slot.date,
-                    timeSlot: slot.timeSlot,
-                    court: slot.court,
-                    courtId: slot.courtId,
-                    price: slot.price,
-                    priceDisplay: slot.priceDisplay
-                })),
+                slots: bookingSlots,
                 totalAmount: convertPriceToNumber(totalAmount),
                 totalAmountDisplay: `₹${convertPriceToNumber(totalAmount)}`,
                 status: "confirmed",
@@ -218,7 +204,6 @@ export const addCourtDetails = async (req, res) => {
                 bookingId: bookingRef.id,
                 bookingData
             });
-
         } else {
             // Slot generation logic
             const slots = generateTimeSlots();
@@ -227,17 +212,8 @@ export const addCourtDetails = async (req, res) => {
             for (const date of Object.keys(slots)) {
                 for (const court of Object.keys(slots[date])) {
                     const courtRef = db.collection("courtDetails").doc(date).collection(court);
-
-                    const existingSlots = await courtRef.get();
-                    
-                    if (!existingSlots.empty) {
-                        console.log(`Slots for ${date} - ${court} already exist. Skipping...`);
-                        continue;
-                    }
-
                     slots[date][court].forEach((slot) => {
-                        const slotRef = courtRef.doc(slot.timeSlot);
-                        batch.set(slotRef, slot);
+                        batch.set(courtRef.doc(slot.timeSlot), slot);
                     });
                 }
             }
@@ -252,13 +228,12 @@ export const addCourtDetails = async (req, res) => {
         console.error("Error in court operation:", error);
         return res.status(500).json({ 
             success: false,
-            error: error.message || "Failed to process booking",
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            error: error.message || "Failed to process booking"
         });
     }
 };
 
-// Get Court Details (Fetching Slots)
+// Get Court Details
 export const getCourtDetails = async (req, res) => {
     const { date, courtId } = req.query;
 
@@ -285,7 +260,6 @@ export const getCourtDetails = async (req, res) => {
             "09:00 PM - 10:00 PM"
         ];
 
-        // Initialize with all time slots as available
         const courtDetails = {};
         allTimeSlots.forEach(timeSlot => {
             courtDetails[timeSlot] = {
@@ -293,26 +267,22 @@ export const getCourtDetails = async (req, res) => {
                 booked: false,
                 price: 800,
                 priceDisplay: "₹800",
-                bookedBy: "",
                 court: courtId,
                 date: date
             };
         });
 
-        // Get actual data from Firestore
         const snapshot = await db
             .collection("courtDetails")
             .doc(date)
             .collection(courtId)
             .get();
 
-        // Update with actual booked slots
         snapshot.docs.forEach(doc => {
             if (courtDetails[doc.id]) {
                 courtDetails[doc.id] = {
                     ...courtDetails[doc.id],
                     ...doc.data(),
-                    // Ensure priceDisplay exists
                     priceDisplay: doc.data().priceDisplay || `₹${doc.data().price || 800}`
                 };
             }
@@ -338,7 +308,7 @@ export const getSlotStatus = async (req, res) => {
     if (!date || !courtId || !timeSlot) {
         return res.status(400).json({
             success: false,
-            error: "Missing required parameters (date, courtId, or timeSlot)"
+            error: "Missing required parameters"
         });
     }
 
@@ -351,28 +321,21 @@ export const getSlotStatus = async (req, res) => {
         const doc = await docRef.get();
 
         if (doc.exists) {
-            const data = doc.data();
             res.status(200).json({
                 success: true,
                 data: {
-                    booked: data.booked || false,
-                    bookedBy: data.bookedBy || "",
-                    phoneNumber: data.phoneNumber || "",
-                    timeSlot: data.timeSlot || timeSlot,
+                    ...doc.data(),
+                    timeSlot: doc.data().timeSlot || timeSlot,
                     court: courtId,
                     date: date,
-                    price: data.price || 800,
-                    priceDisplay: data.priceDisplay || `₹${data.price || 800}`
+                    priceDisplay: doc.data().priceDisplay || `₹${doc.data().price || 800}`
                 }
             });
         } else {
-            // If slot doesn't exist in Firestore, it's available
             res.status(200).json({
                 success: true,
                 data: {
                     booked: false,
-                    bookedBy: "",
-                    phoneNumber: "",
                     timeSlot: timeSlot,
                     court: courtId,
                     date: date,
