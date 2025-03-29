@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import CourtBooking from "./pages/CourtBooking";
 import CheckoutPage from "./pages/CheckoutPage";
 import GoogleAuth from "./pages/GoogleAuth";
-import Login from "./pages/Login"; 
+import Login from "./pages/Login";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import RefreshHandler from "./pages/RefreshHandler";
 import NotFound from "./pages/NotFound";
@@ -16,6 +16,7 @@ import UpcomingDetials from "./pages/UpcomingDetials";
 import Gallery from "./pages/Gallery";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFail from "./pages/PaymentFail";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -51,6 +52,10 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    console.log("Updated isAuthenticated:", isAuthenticated);
+  }, [isAuthenticated]);
+
   if (isDesktop) {
     return (
       <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black text-white text-lg font-bold">
@@ -67,23 +72,24 @@ function App() {
           <div className="container flex-col">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route 
-                path="/login" 
-                element={<Login onLoginSuccess={handleLoginSuccess} />} 
+              <Route
+                path="/login"
+                element={<Login onLoginSuccess={handleLoginSuccess} />}
               />
-              <Route 
-                path="/dashboard" 
-                element={isAuthenticated ? <Home /> : <Navigate to="/login" />} 
-              />
+
               <Route path="/booking-details" element={<CourtBooking />} />
               <Route path="/checkout" element={<CheckoutPage />} />
-              <Route 
-                path="/booking-confirmation" 
-                element={isAuthenticated ? <PaymentSuccess /> : <Navigate to="/login" />} 
+              <Route
+                path="/booking-confirmation"
+                element={isAuthenticated ? <PaymentSuccess /> : <Navigate to="/login" />}
               />
-              <Route 
-                path="/booking-failed" 
-                element={isAuthenticated ? <PaymentFail /> : <Navigate to="/login" />} 
+              <Route
+                path="/booking-failed"
+                element={isAuthenticated ? <PaymentFail /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin"
+                element={<AdminPage />}
               />
               <Route path="/auth/callback" element={<GoogleAuth />} />
               <Route path="/history" element={<BookingHistory />} />

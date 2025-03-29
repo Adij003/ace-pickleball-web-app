@@ -102,7 +102,7 @@ function Home() {
                 </div>
 
                 {/* About Us with gradient border */}
-                <div className="mt-10 p-[2px] bg-gradient-to-r from-transparent via-orange-100 to-transparent rounded-lg">
+                <div className="mt-10 p-[2px]  rounded-lg">
                     <AboutUs />
                 </div>
             </div>
