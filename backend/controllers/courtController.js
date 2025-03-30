@@ -352,3 +352,60 @@ export const getSlotStatus = async (req, res) => {
         });
     }
 };
+
+// Get user data with bookings
+export const getUserBookings = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Get all bookings for this user
+        const bookingsSnapshot = await db.collection("bookings")
+            .where("user.userId", "==", userId)
+            .get();
+
+        const bookings = [];
+        bookingsSnapshot.forEach(doc => {
+            bookings.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        res.status(200).json({
+            success: true,
+            data: bookings
+        });
+    } catch (error) {
+        console.error("Error fetching user bookings:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch user bookings"
+        });
+    }
+};
+// Get booking details
+export const getBookingDetails = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const bookingRef = db.collection("bookings").doc(bookingId);
+        const bookingDoc = await bookingRef.get();
+
+        if (!bookingDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: "Booking not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: bookingDoc.data()
+        });
+    } catch (error) {
+        console.error("Error fetching booking details:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch booking details"
+        });
+    }
+};
