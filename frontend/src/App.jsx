@@ -17,14 +17,18 @@ import Gallery from "./pages/Gallery";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFail from "./pages/PaymentFail";
 import AdminPage from "./pages/AdminPage";
-
+import ViewAllBookings from "./pages/ViewAllBookings";
+import ViewSlots from "./pages/ViewSlots"
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("isAuthenticated") === "true";
+  });
+  
 
   // Load authentication state from localStorage if needed
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated");
-    console.log("Auth Status from LocalStorage:", authStatus);
+    // console.log("Auth Status from LocalStorage:", authStatus);
     if (authStatus === "true") {
       setIsAuthenticated(true);
     }
@@ -53,7 +57,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    console.log("Updated isAuthenticated:", isAuthenticated);
+    console.log("Updated isAuthenticated this is from app.jsx:", isAuthenticated);
   }, [isAuthenticated]);
 
   if (isDesktop) {
@@ -78,7 +82,7 @@ function App() {
               />
 
               <Route path="/booking-details" element={<CourtBooking />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/checkout" element={isAuthenticated ? <CheckoutPage /> : <Navigate to="/login" />} />
               <Route
                 path="/booking-confirmation"
                 element={isAuthenticated ? <PaymentSuccess /> : <Navigate to="/login" />}
@@ -89,8 +93,20 @@ function App() {
               />
               <Route
                 path="/admin"
-                element={<AdminPage />}
+                element={isAuthenticated ? <AdminPage isAuthenticated={isAuthenticated} /> : <Navigate to="/login" />}
               />
+               <Route
+                path="/all-bookings"
+                element={isAuthenticated ? <ViewAllBookings isAuthenticated={isAuthenticated} /> : <Navigate to="/login" />}
+              />
+               <Route
+                path="/change-slots"
+                element={isAuthenticated ? <ViewSlots isAuthenticated={isAuthenticated} /> : <Navigate to="/login" />}
+              />
+             
+
+              
+
               <Route path="/auth/callback" element={<GoogleAuth />} />
               <Route path="/history" element={<BookingHistory />} />
               <Route path="/membership" element={<MembershipDetails />} />

@@ -47,7 +47,7 @@ function CheckoutPage() {
 
         initializeAuth();
     }, []);
-
+    console.log('here we are gettting auth state from checkoutpage: ', authState)
     // Booking data
     const slotArray = Object.values(selectedSlots);
     const totalAmount = slotArray.reduce((sum, slot) => (
