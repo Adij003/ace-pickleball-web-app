@@ -14,7 +14,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173", 
   "https://ace-pickleball-web-app.vercel.app",
-  "https://ace-pickleball-web-app.onrender.com"
+  "https://ace-pickleball-web-app.onrender.com",
 ];
 
 const corsOptions = {

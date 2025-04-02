@@ -8,10 +8,10 @@ import admin from "firebase-admin";
 
 import fs from "fs";
 
-const serviceAccount = JSON.parse(fs.readFileSync("./config/firebaseServiceAccountKey.json", "utf-8"));
+// const serviceAccount = JSON.parse(fs.readFileSync("./config/firebaseServiceAccountKey.json", "utf-8"));
 
-// const serviceAccountPath = "/etc/secrets/firebaseServiceAccountKey.json";
-// const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+const serviceAccountPath = "/etc/secrets/firebaseServiceAccountKey.json";
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
 
 // Firebase Configuration
 const firebaseConfig = {
