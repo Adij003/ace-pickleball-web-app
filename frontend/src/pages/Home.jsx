@@ -16,6 +16,9 @@ function Home() {
         localStorage.getItem("isAuthenticated") === "true"
     );
 
+    const BASE_URL = import.meta.env.VITE_BASE_URL;
+
+
     useEffect(() => {
         const fetchUserIdByEmail = async () => {
             if (isLoggedIn) {
@@ -24,7 +27,7 @@ function Home() {
                     const userEmail = userInfo?.email;
                     
                     if (userEmail) {
-                        const response = await axios.get(`http://localhost:5001/api/users/email/${encodeURIComponent(userEmail)}`);
+                        const response = await axios.get(`${BASE_URL}/users/email/${encodeURIComponent(userEmail)}`);
                         
                         if (response.data && response.data.userId) {
                             // Store both userId and user data in sessionStorage
