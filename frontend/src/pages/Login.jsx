@@ -57,7 +57,7 @@ const Login = ({ onLoginSuccess }) => {
         <span>Back</span>
       </button>
       <div className="flex-col">
-        <div className="bg-white p-8 rounded-2xl shadow-lg w-96 border-amber-300 border-8 relative">
+        <div className="bg-white p-4 rounded-2xl shadow-lg w-80 border-amber-300 border-8 relative">
           <div className="flex justify-between">
             <div className="mt-4">
               <h2 className="text-2xl font-bold text-gray-900">Login</h2>
