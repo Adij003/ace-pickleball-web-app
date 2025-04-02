@@ -52,7 +52,7 @@ const googleAuth = async (req, res) => {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
       client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: "http://localhost:5173",
+      redirect_uri: "https://ace-pickleball-web-app.vercel.app",
       grant_type: "authorization_code",
     });
 
