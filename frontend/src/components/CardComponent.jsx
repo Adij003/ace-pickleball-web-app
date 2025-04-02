@@ -47,7 +47,9 @@ function CardComponent({onBookNowClick}) {
 
       {/* Card Footer */}
       <div className="p-4 pt-0">
-        <Link to='/booking-details'>
+        {/* <Link to='/booking-details'> */}
+        <Link to='/live-booking'>
+
         <button className="px-4 py-2 w-full bg-amber-500 text-white rounded-md hover:bg-blue-700"
         >
           Book Now

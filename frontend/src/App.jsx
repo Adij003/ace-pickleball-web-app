@@ -19,6 +19,8 @@ import PaymentFail from "./pages/PaymentFail";
 import AdminPage from "./pages/AdminPage";
 import ViewAllBookings from "./pages/ViewAllBookings";
 import ViewSlots from "./pages/ViewSlots"
+import ZohoBooking from "./pages/ZohoBooking";
+import BookingHistoryZoho from "./pages/BookingHistoryZoho";
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("isAuthenticated") === "true";
@@ -106,6 +108,9 @@ function App() {
              
 
               
+             <Route path="/live-booking" element={isAuthenticated ? <ZohoBooking /> : <Navigate to="/login" />} />
+             <Route path="/booking-history" element={isAuthenticated ? <BookingHistoryZoho /> : <Navigate to="/login" />} />
+
 
               <Route path="/auth/callback" element={<GoogleAuth />} />
               <Route path="/history" element={<BookingHistory />} />

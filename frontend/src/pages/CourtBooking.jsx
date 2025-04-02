@@ -5,7 +5,8 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 
 function CourtBooking() {
-    const navigate = useNavigate();
+    const BASE_URL = import.meta.env.VITE_BASE_URL;
+    const navigate = useNavigate()
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [preBookedSlots, setPreBookedSlots] = useState({});
     const [selectedSlots, setSelectedSlots] = useState({});
@@ -35,7 +36,7 @@ function CourtBooking() {
             setLoading(true);
             try {
                 const slotPromises = courts.map(courtId =>
-                    axios.get(`http://localhost:5001/api/courts/court-details`, {
+                    axios.get(`${BASE_URL}/courts/court-details`, {
                         params: {
                             date: selectedDate,
                             courtId

@@ -168,7 +168,9 @@ function Home() {
                                 
                                 {isLoggedIn && (
                                     <Link 
-                                        to="/history" 
+                                        // to="/history"
+                                        to="/booking-history" 
+
                                         className="flex items-center px-4 py-3 rounded-xl mx-2 bg-gray-50 hover:bg-gray-100 text-gray-800 transition-all duration-200 group hover:shadow-sm"
                                         onClick={() => setIsOpen(false)}
                                     >

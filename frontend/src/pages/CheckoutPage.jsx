@@ -196,7 +196,7 @@ function CheckoutPage() {
                     price: typeof slot.price === 'string' ? 
                         parseInt(slot.price.replace(/\D/g, ''), 10) : 
                         slot.price,
-                    userEmail: authState.user.email
+                    userEmail: authState.user.email 
                 })),
                 userDetails: {
                     userId: authState.userId,
@@ -257,6 +257,7 @@ function CheckoutPage() {
                 toast.error(errorMessage);
             } else {
                 toast.error("Booking failed. Please try again.");
+                navigate("/booking-failed")
             }
         } finally {
             setIsProcessing(false);
