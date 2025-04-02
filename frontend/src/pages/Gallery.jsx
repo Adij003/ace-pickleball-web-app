@@ -23,7 +23,7 @@ function Gallery() {
            transition={{ duration: 0.6 }}
            className="text-center"
          >
-           <h1 className="text-4xl font-bold mb-4">Upcoming Events</h1>
+           <h1 className="text-4xl font-bold mb-4">Pickleball Gallery</h1>
    
            <img
              src={gallery}
